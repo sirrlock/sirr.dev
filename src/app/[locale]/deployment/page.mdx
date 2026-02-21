@@ -1,0 +1,156 @@
+export const metadata = {
+  title: 'Deployment',
+  description:
+    'Install and deploy Sirr using Docker, pre-built binaries, Homebrew, or Cargo. Includes a walkthrough of the minimal Docker image.',
+}
+
+export const sections = [
+  { title: 'Docker', id: 'docker' },
+  { title: 'Binary download', id: 'binary-download' },
+  { title: 'Homebrew', id: 'homebrew' },
+  { title: 'Cargo', id: 'cargo' },
+  { title: 'Dockerfile walkthrough', id: 'dockerfile-walkthrough' },
+]
+
+# Deployment
+
+Sirr ships as a single static binary with no runtime dependencies. Choose the installation method that fits your infrastructure. {{ className: 'lead' }}
+
+## Docker
+
+Docker is the recommended way to deploy Sirr. The official image is built `FROM scratch` with a musl-linked static binary, resulting in an image with no shell, no OS, and minimal attack surface.
+
+```bash {{ title: 'Quick start' }}
+docker run -d \
+  --name sirr \
+  -p 8080:8080 \
+  -v ./sirr-data:/data \
+  -e SIRR_MASTER_KEY="$(openssl rand -hex 32)" \
+  -e SIRR_DATA_DIR=/data \
+  ghcr.io/sirrvault/sirr
+```
+
+<Note>
+  Always mount a volume to `/data` so your encrypted database survives container restarts. Without a volume, all secrets are lost when the container stops.
+</Note>
+
+For persistent deployments, use Docker Compose:
+
+```yaml {{ title: 'docker-compose.yml' }}
+services:
+  sirr:
+    image: ghcr.io/sirrvault/sirr
+    ports:
+      - "8080:8080"
+    volumes:
+      - sirr-data:/data
+    environment:
+      SIRR_MASTER_KEY: "${SIRR_MASTER_KEY}"
+      SIRR_DATA_DIR: /data
+    restart: unless-stopped
+
+volumes:
+  sirr-data:
+```
+
+Start the stack:
+
+```bash {{ title: 'Start with Compose' }}
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+docker compose up -d
+```
+
+---
+
+## Binary download {{ id: 'binary-download' }}
+
+Download a pre-built binary from [GitHub Releases](https://github.com/SirrVault/sirr/releases) for your platform.
+
+### Platform matrix
+
+| Platform | Archive |
+| --- | --- |
+| Linux (x86_64) | `sirr-linux-amd64.tar.gz` |
+| Linux (ARM64) | `sirr-linux-arm64.tar.gz` |
+| macOS (x86_64) | `sirr-macos-amd64.tar.gz` |
+| macOS (ARM64 / Apple Silicon) | `sirr-macos-arm64.tar.gz` |
+| Windows (x86_64) | `sirr-windows-amd64.zip` |
+
+```bash {{ title: 'Download and install (Linux example)' }}
+# Download the latest release
+curl -fsSL https://github.com/SirrVault/sirr/releases/latest/download/sirr-linux-amd64.tar.gz \
+  | tar -xz -C /usr/local/bin
+
+# Verify the binary
+sirr --version
+
+# Start the server
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+sirr serve
+```
+
+---
+
+## Homebrew
+
+Install Sirr via Homebrew on macOS or Linux:
+
+```bash {{ title: 'Homebrew' }}
+brew tap sirrvault/tap
+brew install sirr
+```
+
+Then start the server:
+
+```bash {{ title: 'Start after Homebrew install' }}
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+sirr serve
+```
+
+---
+
+## Cargo
+
+If you have the Rust toolchain installed, you can build Sirr from source:
+
+```bash {{ title: 'Install via Cargo' }}
+cargo install sirr
+```
+
+This compiles the binary from crates.io and places it in your Cargo bin directory. Requires a working Rust toolchain (stable channel).
+
+```bash {{ title: 'Start after Cargo install' }}
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+sirr serve
+```
+
+---
+
+## Dockerfile walkthrough {{ id: 'dockerfile-walkthrough' }}
+
+The official Sirr Docker image uses a multi-stage build to produce the smallest possible image. Here is what the Dockerfile does:
+
+```dockerfile {{ title: 'Dockerfile (simplified)' }}
+# Stage 1: Build a fully static binary with musl
+FROM rust:latest AS builder
+RUN rustup target add x86_64-unknown-linux-musl
+WORKDIR /build
+COPY . .
+RUN cargo build --release --target x86_64-unknown-linux-musl
+
+# Stage 2: Scratch image — no OS, no shell
+FROM scratch
+COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/sirr /sirr
+VOLUME ["/data"]
+EXPOSE 8080
+ENTRYPOINT ["/sirr", "serve"]
+```
+
+### Why `FROM scratch`?
+
+- **No shell** means no shell injection attacks.
+- **No OS packages** means no CVEs from base image dependencies.
+- **Tiny image size** — the final image is just the static binary (typically under 15 MB).
+- **Single process** — the container runs exactly one process with no init system.
+
+The `/data` volume is where Sirr stores `sirr.db` (the redb database) and `sirr.salt` (the Argon2id salt). Both files are required together for decryption — back them up as a pair.

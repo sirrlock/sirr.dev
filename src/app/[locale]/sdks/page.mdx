@@ -1,0 +1,211 @@
+import { Libraries } from '@/components/Libraries'
+
+export const metadata = {
+  title: 'SDKs',
+  description:
+    'Official Sirr client libraries for Node.js, Python, .NET, and the Rust CLI.',
+}
+
+export const sections = [
+  { title: 'Official libraries', id: 'official-libraries' },
+  { title: 'Node.js', id: 'node-js' },
+  { title: 'Python', id: 'python' },
+  { title: '.NET', id: 'dotnet' },
+  { title: 'Rust CLI', id: 'rust-cli' },
+]
+
+# SDKs
+
+The fastest way to integrate with Sirr is through one of the official client libraries. Each SDK wraps the HTTP API so you can push and retrieve secrets with a single function call. {{ className: 'lead' }}
+
+## Official libraries
+
+<Libraries />
+
+---
+
+## Node.js
+
+<Row>
+  <Col>
+
+    The `@sirr/node` package is a zero-dependency TypeScript client built on native `fetch`. It ships ESM and CJS bundles so it works in Node.js, Deno, Bun, and edge runtimes.
+
+    ```bash {{ title: 'Install' }}
+    npm install @sirr/node
+    ```
+
+    <div className="not-prose">
+      <Button href="https://github.com/SirrVault/node" variant="text" arrow="right">
+        <>View on GitHub</>
+      </Button>
+    </div>
+
+  </Col>
+  <Col>
+
+    ```js {{ title: 'Usage' }}
+    import { SirrClient } from '@sirr/node'
+
+    const sirr = new SirrClient({
+      server: process.env.SIRR_SERVER,
+      token: process.env.SIRR_TOKEN,
+    })
+
+    // Push a secret with a 1-hour TTL and 3 read limit
+    await sirr.push('db/password', 's3cret!', {
+      ttl: 3600,
+      reads: 3,
+    })
+
+    // Retrieve the secret
+    const secret = await sirr.get('db/password')
+    console.log(secret.value) // "s3cret!"
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Python
+
+<Row>
+  <Col>
+
+    The `sirr` package provides both synchronous and asynchronous clients powered by `httpx`. Python 3.9+ is supported.
+
+    ```bash {{ title: 'Install' }}
+    pip install sirr
+    ```
+
+    <div className="not-prose">
+      <Button href="https://github.com/SirrVault/python" variant="text" arrow="right">
+        <>View on GitHub</>
+      </Button>
+    </div>
+
+  </Col>
+  <Col>
+
+    ```python {{ title: 'Sync usage' }}
+    import os
+    from sirr import SirrClient
+
+    client = SirrClient(
+        server=os.environ["SIRR_SERVER"],
+        token=os.environ["SIRR_TOKEN"],
+    )
+
+    # Push a secret
+    client.push("db/password", "s3cret!", ttl=3600, reads=3)
+
+    # Retrieve the secret
+    secret = client.get("db/password")
+    print(secret.value)  # "s3cret!"
+    ```
+
+    ```python {{ title: 'Async usage' }}
+    from sirr import AsyncSirrClient
+
+    async with AsyncSirrClient(
+        server=os.environ["SIRR_SERVER"],
+        token=os.environ["SIRR_TOKEN"],
+    ) as client:
+        await client.push("db/password", "s3cret!")
+        secret = await client.get("db/password")
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## .NET {{ anchor: false, id: 'dotnet' }}
+
+<Row>
+  <Col>
+
+    `Sirr.Client` is an async-first .NET library built on `HttpClient`. Targets .NET 6+ and supports dependency injection via `IHttpClientFactory`.
+
+    ```bash {{ title: 'Install' }}
+    dotnet add package Sirr.Client
+    ```
+
+    <div className="not-prose">
+      <Button href="https://github.com/SirrVault/dotnet" variant="text" arrow="right">
+        <>View on GitHub</>
+      </Button>
+    </div>
+
+  </Col>
+  <Col>
+
+    ```csharp {{ title: 'Usage' }}
+    using Sirr;
+
+    var client = new SirrClient(new SirrOptions
+    {
+        Server = Environment.GetEnvironmentVariable("SIRR_SERVER"),
+        Token = Environment.GetEnvironmentVariable("SIRR_TOKEN"),
+    });
+
+    // Push a secret
+    await client.PushAsync("db/password", "s3cret!", new PushOptions
+    {
+        Ttl = 3600,
+        Reads = 3,
+    });
+
+    // Retrieve the secret
+    var secret = await client.GetAsync("db/password");
+    Console.WriteLine(secret.Value); // "s3cret!"
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Rust CLI
+
+<Row>
+  <Col>
+
+    The `sirr` binary is both the server and a built-in CLI. You can use it to push and retrieve secrets directly from the command line without any additional tooling.
+
+    ```bash {{ title: 'Install via Cargo' }}
+    cargo install sirr
+    ```
+
+    Or download a prebuilt binary from the [GitHub releases](https://github.com/SirrVault/sirr/releases) page.
+
+    <div className="not-prose">
+      <Button href="https://github.com/SirrVault/sirr" variant="text" arrow="right">
+        <>View on GitHub</>
+      </Button>
+    </div>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'CLI usage' }}
+    # Set your server and token
+    export SIRR_SERVER=http://localhost:8080
+    export SIRR_TOKEN=your-master-key
+
+    # Push a secret with a 1-hour TTL
+    sirr push db/password "s3cret!" --ttl 3600 --reads 3
+
+    # Get a secret
+    sirr get db/password
+
+    # List all secrets (metadata only)
+    sirr list
+
+    # Delete a secret
+    sirr delete db/password
+    ```
+
+  </Col>
+</Row>

@@ -1,0 +1,225 @@
+export const metadata = {
+  title: 'MCP Server',
+  description:
+    'Integrate Sirr with AI assistants like Claude using the Model Context Protocol. Read and write secrets directly from conversations.',
+}
+
+export const sections = [
+  { title: 'What is MCP', id: 'what-is-mcp' },
+  { title: 'Installation', id: 'installation' },
+  { title: 'Configuration', id: 'configuration' },
+  { title: 'Available tools', id: 'available-tools' },
+  { title: 'Conversation examples', id: 'conversation-examples' },
+]
+
+# MCP Server
+
+Give AI assistants direct access to your secrets vault. Sirr's MCP server lets tools like Claude push, read, and manage ephemeral secrets without leaving the conversation. {{ className: 'lead' }}
+
+---
+
+## What is MCP
+
+The Model Context Protocol (MCP) is an open standard that allows AI assistants to interact with external tools and data sources. Instead of copy-pasting secrets between your terminal and an AI chat, MCP lets the assistant call Sirr directly.
+
+Sirr's MCP server exposes six tools that map to the core Sirr operations. When an AI assistant reads a secret through MCP, the same rules apply -- read counters increment, TTLs are enforced, and one-time secrets burn after a single read.
+
+<Note>
+  MCP does not bypass any security constraints. Every tool call goes through the same authenticated HTTP API with the same TTL and read-limit enforcement.
+</Note>
+
+---
+
+## Installation
+
+Install the MCP server globally via npm.
+
+```bash {{ title: 'Install' }}
+npm install -g @sirr/mcp
+```
+
+After installation, the `sirr-mcp` binary is available on your `PATH`.
+
+---
+
+## Configuration
+
+Add Sirr to your MCP configuration file. Most AI tools look for `.mcp.json` in your project root or home directory.
+
+```json {{ title: '.mcp.json' }}
+{
+  "mcpServers": {
+    "sirr": {
+      "command": "sirr-mcp",
+      "env": {
+        "SIRR_SERVER": "http://localhost:8080",
+        "SIRR_TOKEN": "your-token"
+      }
+    }
+  }
+}
+```
+
+<Row>
+  <Col>
+
+    ### Environment variables
+
+    <Properties>
+      <Property name="SIRR_SERVER" type="string">
+        URL of the Sirr server. Defaults to `http://localhost:8080`.
+      </Property>
+      <Property name="SIRR_TOKEN" type="string">
+        Bearer token for authentication. Must match the server's `SIRR_MASTER_KEY`.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Verify the MCP server' }}
+    # Test that the MCP server can reach Sirr
+    SIRR_SERVER=http://localhost:8080 \
+    SIRR_TOKEN=your-token \
+    sirr-mcp --health
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Available tools
+
+The MCP server exposes six tools that AI assistants can call during a conversation.
+
+<Row>
+  <Col>
+
+    ### push_secret
+
+    Push a secret to the vault.
+
+    <Properties>
+      <Property name="key" type="string" required>
+        The secret key name.
+      </Property>
+      <Property name="value" type="string" required>
+        The secret value.
+      </Property>
+      <Property name="ttl_seconds" type="number">
+        Time-to-live in seconds. Optional.
+      </Property>
+      <Property name="max_reads" type="number">
+        Maximum read count before the secret is burned. Optional.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ### get_secret
+
+    Retrieve a secret value. Increments the read counter.
+
+    <Properties>
+      <Property name="key" type="string" required>
+        The secret key to retrieve.
+      </Property>
+    </Properties>
+
+    ### delete_secret
+
+    Delete a secret immediately.
+
+    <Properties>
+      <Property name="key" type="string" required>
+        The secret key to delete.
+      </Property>
+    </Properties>
+
+  </Col>
+</Row>
+
+<Row>
+  <Col>
+
+    ### list_secrets
+
+    List all secret metadata. Returns keys, TTLs, and read counts. No values are returned.
+
+    _No parameters._
+
+  </Col>
+  <Col>
+
+    ### prune_secrets
+
+    Delete all expired secrets from the vault.
+
+    _No parameters._
+
+    ### health_check
+
+    Check that the Sirr server is reachable and healthy.
+
+    _No parameters._
+
+  </Col>
+</Row>
+
+---
+
+## Conversation examples
+
+Here is what it looks like when an AI assistant uses Sirr through MCP.
+
+### Reading a one-time secret
+
+```txt {{ title: 'Conversation' }}
+User:  What is the database connection string? It is stored as DB_URL in Sirr.
+
+AI:    Let me retrieve that for you.
+       [Calls get_secret(key: "DB_URL")]
+
+       The connection string is postgres://user:pass@db:5432/myapp.
+
+       Note: this secret was configured with max_reads=1, so it has
+       now been burned and is no longer available on the server.
+```
+
+### Pushing a secret with a TTL
+
+```txt {{ title: 'Conversation' }}
+User:  Store this API key in Sirr with a 2-hour TTL: sk-live-abc123
+
+AI:    [Calls push_secret(key: "API_KEY", value: "sk-live-abc123", ttl_seconds: 7200)]
+
+       Done. The secret API_KEY is stored and will self-destruct in 2 hours.
+```
+
+### Listing secrets before cleanup
+
+```txt {{ title: 'Conversation' }}
+User:  What secrets do we have stored right now?
+
+AI:    [Calls list_secrets()]
+
+       Here are the current secrets:
+
+       - DB_URL      -- expires in 58 minutes, 0 of 1 reads used
+       - API_KEY     -- expires in 1 hour 42 minutes, no read limit
+       - REDIS_URL   -- expired
+
+       Would you like me to prune the expired ones?
+
+User:  Yes, clean them up.
+
+AI:    [Calls prune_secrets()]
+
+       Pruned 1 expired secret. 2 active secrets remain.
+```
+
+<Note>
+  The AI assistant never caches secret values between conversations. Each retrieval is a live call to the Sirr server with full TTL and read-limit enforcement.
+</Note>

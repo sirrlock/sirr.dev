@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "siteTitle": "Sirr",
+    "siteTitleTemplate": "%s - Sirr 문서",
+    "siteDescription": "Sirr 문서 — AI 시대를 위해 구축된 임시 시크릿 보관소.",
+    "pages": {
+      "/": {
+        "title": "Sirr 문서",
+        "description": "Sirr 문서 — AI 시대를 위해 구축된 임시 시크릿 보관소. TTL과 읽기 제한이 있는 시크릿을 전송하세요."
+      },
+      "/quickstart": {
+        "title": "빠른 시작",
+        "description": "몇 분 만에 Sirr를 시작하세요. 설치하고, 구성하고, 첫 번째 임시 시크릿을 전송하세요."
+      },
+      "/architecture": {
+        "title": "아키텍처",
+        "description": "Sirr가 ChaCha20Poly1305, Argon2id, redb를 사용하여 시크릿을 암호화, 저장, 만료하는 방법."
+      },
+      "/configuration": {
+        "title": "구성",
+        "description": "Sirr 서버 및 CLI 클라이언트의 모든 환경 변수와 구성 옵션."
+      },
+      "/authentication": {
+        "title": "인증",
+        "description": "Bearer 토큰을 사용하여 Sirr API에 인증하는 방법."
+      },
+      "/errors": {
+        "title": "오류",
+        "description": "Sirr API의 HTTP 상태 코드, 오류 응답 형식 및 문제 해결."
+      },
+      "/sdks": {
+        "title": "SDKs",
+        "description": "Node.js, Python, .NET용 공식 Sirr 클라이언트 라이브러리."
+      },
+      "/api-reference": {
+        "title": "API 레퍼런스",
+        "description": "Sirr 서버의 6개 엔드포인트에 대한 전체 HTTP API 레퍼런스."
+      },
+      "/deployment": {
+        "title": "배포",
+        "description": "Docker, Homebrew, 바이너리 다운로드 또는 소스 빌드로 Sirr를 배포하세요."
+      },
+      "/self-hosting": {
+        "title": "셀프 호스팅",
+        "description": "리버스 프록시, TLS, 백업, 모니터링을 포함한 프로덕션 배포 가이드."
+      },
+      "/security": {
+        "title": "보안",
+        "description": "Sirr의 위협 모델, 암호화 세부 사항 및 제로 트러스트 설계 원칙."
+      },
+      "/licensing": {
+        "title": "라이선스",
+        "description": "BSL 1.1 라이선스 세부 사항, 무료 티어 제한 및 Sirr 상업 라이선스."
+      },
+      "/cli": {
+        "title": "CLI 레퍼런스",
+        "description": "예제와 함께하는 Sirr의 9개 CLI 명령어 전체 레퍼런스."
+      },
+      "/mcp": {
+        "title": "MCP 서버",
+        "description": "Claude Code AI 통합을 위한 Sirr MCP 서버 설정."
+      },
+      "/ai-workflows": {
+        "title": "AI 워크플로",
+        "description": "AI 에이전트, CI/CD 파이프라인 및 팀 워크플로에서 Sirr를 사용하는 패턴."
+      }
+    }
+  },
+  "nav": {
+    "groups": {
+      "guides": "가이드",
+      "server": "서버",
+      "tools": "도구"
+    },
+    "links": {
+      "introduction": "소개",
+      "quickstart": "빠른 시작",
+      "architecture": "아키텍처",
+      "configuration": "구성",
+      "authentication": "인증",
+      "errors": "오류",
+      "sdks": "SDKs",
+      "apiReference": "API 레퍼런스",
+      "deployment": "배포",
+      "selfHosting": "셀프 호스팅",
+      "security": "보안",
+      "licensing": "라이선스",
+      "cli": "CLI 레퍼런스",
+      "mcp": "MCP 서버",
+      "aiWorkflows": "AI 워크플로"
+    },
+    "topLevel": {
+      "docs": "문서",
+      "github": "GitHub"
+    }
+  },
+  "common": {
+    "readMore": "더 보기",
+    "previous": "이전",
+    "next": "다음",
+    "copyright": "Copyright {year}. All rights reserved.",
+    "getStarted": "시작하기",
+    "exploreSDKs": "SDKs 살펴보기",
+    "officialLibraries": "공식 라이브러리",
+    "followOnX": "X에서 팔로우",
+    "followOnGithub": "GitHub에서 팔로우",
+    "joinDiscord": "Discord 서버에 참여하세요"
+  },
+  "home": {
+    "heroTitle": "Sirr 문서",
+    "heroLead": "AI 시대를 위해 구축된 시크릿 매니저. 모든 시크릿은 만료됩니다. 설계부터 그렇습니다. TTL과 읽기 제한이 있는 시크릿을 전송하세요 — 조건이 충족되면 시크릿은 사라집니다.",
+    "gettingStarted": "시작하기",
+    "gettingStartedLead": "Sirr를 단일 바이너리 또는 Docker 컨테이너로 설치하고, 마스터 키를 구성한 후, 몇 분 만에 임시 시크릿 전송을 시작하세요."
+  },
+  "guides": [
+    {
+      "href": "/quickstart",
+      "name": "빠른 시작",
+      "description": "Sirr를 설치하고 2분 이내에 첫 번째 시크릿을 전송하세요."
+    },
+    {
+      "href": "/architecture",
+      "name": "아키텍처",
+      "description": "Sirr가 시크릿을 암호화, 저장, 만료하는 방법을 이해하세요."
+    },
+    {
+      "href": "/security",
+      "name": "보안",
+      "description": "위협 모델, 암호화 세부 사항 및 제로 트러스트 설계."
+    },
+    {
+      "href": "/ai-workflows",
+      "name": "AI 워크플로",
+      "description": "Claude, LangChain, CI/CD에서 Sirr를 사용하는 패턴."
+    }
+  ],
+  "resources": [
+    {
+      "href": "/api-reference",
+      "name": "API 레퍼런스",
+      "description": "임시 시크릿 생성, 조회 및 관리를 위한 전체 HTTP API 레퍼런스."
+    },
+    {
+      "href": "/cli",
+      "name": "CLI 레퍼런스",
+      "description": "터미널에서 시크릿을 전송, 조회, 관리하는 9개 CLI 명령어."
+    },
+    {
+      "href": "/mcp",
+      "name": "MCP 서버",
+      "description": "Sirr를 Claude Code에 연결하여 AI 네이티브 시크릿 관리를 구현하세요."
+    },
+    {
+      "href": "/sdks",
+      "name": "SDKs",
+      "description": "Node.js, Python, .NET용 공식 클라이언트 라이브러리."
+    }
+  ],
+  "libraries": [
+    {
+      "name": "Node.js",
+      "description": "@sirr/node — 의존성 없는 TypeScript 클라이언트. 네이티브 fetch.",
+      "href": "https://github.com/SirrVault/node"
+    },
+    {
+      "name": "Python",
+      "description": "sirr — httpx 기반의 동기 및 비동기 클라이언트.",
+      "href": "https://github.com/SirrVault/python"
+    },
+    {
+      "name": ".NET",
+      "description": "Sirr.Client — HttpClient 기반의 비동기 우선 클라이언트.",
+      "href": "https://github.com/SirrVault/dotnet"
+    },
+    {
+      "name": "Rust CLI",
+      "description": "sirr 바이너리는 완전한 기능의 CLI 클라이언트로도 사용됩니다.",
+      "href": "https://github.com/SirrVault/sirr"
+    }
+  ]
+}

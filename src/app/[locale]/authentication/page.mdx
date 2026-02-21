@@ -1,0 +1,127 @@
+export const metadata = {
+  title: 'Authentication',
+  description:
+    'Learn how Sirr authenticates API requests using a single bearer token that also seeds encryption key derivation.',
+}
+
+export const sections = [
+  { title: 'Bearer token', id: 'bearer-token' },
+  { title: 'Making authenticated requests', id: 'making-authenticated-requests' },
+  { title: 'Token security', id: 'token-security' },
+]
+
+# Authentication
+
+Every request to the Sirr API must include a bearer token. Sirr uses a single master key for authentication — there are no API key pairs, OAuth flows, or session cookies. Set `SIRR_MASTER_KEY` when you start the server and pass it as a bearer token with every request. {{ className: 'lead' }}
+
+## Bearer token
+
+Sirr authenticates requests using the `SIRR_MASTER_KEY` environment variable. This key serves a dual purpose: it is both the bearer token for API authentication and the seed for Argon2id key derivation used to encrypt secrets at rest.
+
+<Note>
+  `SIRR_MASTER_KEY` has dual purpose — it seeds the Argon2id key derivation for
+  encrypting secrets AND authenticates every API request. Treat it like a root
+  password. If it changes, previously stored secrets become unreadable.
+</Note>
+
+When the server starts, it reads `SIRR_MASTER_KEY` from the environment. Every incoming request's `Authorization` header is compared against this value using a constant-time comparison to prevent timing attacks.
+
+```bash {{ title: 'Starting the server' }}
+export SIRR_MASTER_KEY="your-secret-master-key"
+sirr
+```
+
+---
+
+## Making authenticated requests
+
+Include the token in the `Authorization` header as a standard Bearer token. Every endpoint except the health check requires authentication.
+
+<Row>
+  <Col>
+
+    ### Header format
+
+    ```
+    Authorization: Bearer <token>
+    ```
+
+    The token value must match the `SIRR_MASTER_KEY` the server was started with. Requests without a valid token receive a `401 Unauthorized` response.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'cURL' }}
+    curl -H "Authorization: Bearer $SIRR_TOKEN" \
+      http://localhost:8080/secrets
+    ```
+
+  </Col>
+</Row>
+
+### SDK examples
+
+If you use one of the official SDKs, pass the token once when constructing the client and every request is authenticated automatically.
+
+<CodeGroup title="Authenticated client">
+
+```js {{ title: 'Node.js' }}
+import { SirrClient } from '@sirr/node'
+
+const sirr = new SirrClient({
+  server: process.env.SIRR_SERVER,
+  token: process.env.SIRR_TOKEN,
+})
+
+const secret = await sirr.get('db/password')
+```
+
+```python {{ title: 'Python' }}
+import os
+from sirr import SirrClient
+
+client = SirrClient(
+    server=os.environ["SIRR_SERVER"],
+    token=os.environ["SIRR_TOKEN"],
+)
+
+secret = client.get("db/password")
+```
+
+```csharp {{ title: '.NET' }}
+using Sirr;
+
+var client = new SirrClient(new SirrOptions
+{
+    Server = Environment.GetEnvironmentVariable("SIRR_SERVER"),
+    Token = Environment.GetEnvironmentVariable("SIRR_TOKEN"),
+});
+
+var secret = await client.GetAsync("db/password");
+```
+
+</CodeGroup>
+
+<div className="not-prose">
+  <Button href="/sdks" variant="text" arrow="right">
+    <>Check out the official SDKs</>
+  </Button>
+</div>
+
+---
+
+## Token security
+
+The master key is the single credential that protects your entire Sirr instance. Follow these guidelines to keep it safe.
+
+- **Use TLS in production.** Without HTTPS the bearer token is sent in plaintext over the network. Always terminate TLS in front of Sirr — via a reverse proxy, load balancer, or service mesh.
+- **Never commit tokens to git.** Use environment variables, a `.env` file excluded from version control, or a secrets manager like Vault or AWS Secrets Manager.
+- **Rotate carefully.** Changing `SIRR_MASTER_KEY` invalidates all existing encrypted secrets because the Argon2id-derived encryption key changes. Plan a migration window if you need to rotate.
+- **Constant-time comparison.** Sirr compares the provided token against the master key using a constant-time algorithm, preventing timing side-channel attacks that could leak the key one character at a time.
+- **Limit network exposure.** Bind Sirr to `127.0.0.1` or a private network interface when it does not need to be publicly reachable.
+
+<Note>
+  If you suspect your master key has been compromised, rotate it immediately.
+  All secrets encrypted under the old key will become permanently unreadable —
+  re-push any secrets that are still needed after rotation.
+</Note>

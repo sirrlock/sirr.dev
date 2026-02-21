@@ -1,0 +1,290 @@
+export const metadata = {
+  title: 'AI Workflows',
+  description:
+    'Patterns for using Sirr with AI agents, CI/CD pipelines, team environments, and contractor access. Ephemeral secrets for every workflow.',
+}
+
+export const sections = [
+  { title: 'Claude Code + MCP', id: 'claude-code-mcp' },
+  { title: 'Python agents', id: 'python-agents' },
+  { title: 'CI/CD one-time tokens', id: 'ci-cd-one-time-tokens' },
+  { title: 'Team .env sync', id: 'team-env-sync' },
+  { title: 'Contractor access', id: 'contractor-access' },
+  { title: 'Security mental model', id: 'security-mental-model' },
+]
+
+# AI Workflows
+
+Sirr gives every secret a death clock. These patterns show how to use ephemeral secrets with AI agents, CI/CD pipelines, distributed teams, and short-lived contractor engagements. {{ className: 'lead' }}
+
+---
+
+## Claude Code + MCP
+
+The fastest way to give Claude direct access to your secrets vault. Install the MCP server, configure it once, and Claude can push and retrieve secrets without you ever pasting credentials into a chat window.
+
+### Setup
+
+```bash {{ title: 'Install the MCP server' }}
+npm install -g @sirr/mcp
+```
+
+Add the Sirr MCP server to your project's `.mcp.json`:
+
+```json {{ title: '.mcp.json' }}
+{
+  "mcpServers": {
+    "sirr": {
+      "command": "sirr-mcp",
+      "env": {
+        "SIRR_SERVER": "http://localhost:8080",
+        "SIRR_TOKEN": "your-token"
+      }
+    }
+  }
+}
+```
+
+### Example conversation
+
+```txt {{ title: 'Claude reads a one-time credential' }}
+You:     I need to connect to the staging database. The credential
+         is stored as STAGING_DB_URL in Sirr with max_reads=1.
+
+Claude:  [Calls get_secret(key: "STAGING_DB_URL")]
+
+         Got it. I have configured the database connection. The credential
+         was set to burn after one read, so it has been permanently
+         destroyed on the server. No one else can retrieve it.
+```
+
+<Note>
+  The secret existed just long enough to be used. It was born, read once, and destroyed -- all within a single conversation turn.
+</Note>
+
+---
+
+## Python agents
+
+AI agent frameworks like LangChain and CrewAI often need database credentials, API keys, or service tokens. Instead of hardcoding them or storing them in long-lived environment variables, push one-time secrets that self-destruct after the agent reads them.
+
+<Row>
+  <Col>
+
+    ### Pattern
+
+    1. Push a credential with `reads=1` before launching the agent
+    2. The agent reads the credential via the Sirr Python SDK
+    3. The credential is burned immediately after the read
+    4. If the agent crashes and restarts, it cannot reuse the old credential
+
+  </Col>
+  <Col>
+
+    ```python {{ title: 'Python SDK' }}
+    import os
+    from sirr import SirrClient
+
+    sirr = SirrClient(
+        server="http://localhost:8080",
+        token=os.environ["SIRR_TOKEN"],
+    )
+
+    # Push a one-time credential for the agent
+    sirr.push(
+        "DB_URL",
+        "postgres://user:pass@db:5432/app",
+        reads=1,
+        ttl=3600,
+    )
+
+    # Agent reads it -- credential is gone
+    secret = sirr.get("DB_URL")
+    print(secret.value)
+    # Any subsequent read will fail
+    ```
+
+  </Col>
+</Row>
+
+### LangChain tool example
+
+```python {{ title: 'LangChain tool' }}
+from langchain.tools import tool
+from sirr import SirrClient
+
+sirr = SirrClient(
+    server="http://localhost:8080",
+    token=os.environ["SIRR_TOKEN"],
+)
+
+@tool
+def get_database_url() -> str:
+    """Retrieve the database URL. This is a one-time credential."""
+    secret = sirr.get("DB_URL")
+    return secret.value
+```
+
+---
+
+## CI/CD one-time tokens
+
+Push a deploy token before the pipeline runs. The token is read exactly once during deployment and then ceases to exist. If the pipeline is replayed or an attacker intercepts the logs, the token is already gone.
+
+<Row>
+  <Col>
+
+    ### Pattern
+
+    1. A pre-deploy step pushes the token with `--reads 1`
+    2. The deploy step retrieves it via `sirr get`
+    3. The token is burned on read
+    4. Pipeline replays and log scraping find nothing
+
+  </Col>
+  <Col>
+
+    ```yaml {{ title: 'GitHub Actions' }}
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        env:
+          SIRR_SERVER: ${{ secrets.SIRR_SERVER }}
+          SIRR_TOKEN: ${{ secrets.SIRR_TOKEN }}
+        steps:
+          - name: Push one-time deploy token
+            run: |
+              sirr push DEPLOY_TOKEN="${{ secrets.DEPLOY_TOKEN }}" \
+                --reads 1 \
+                --ttl 5m
+
+          - name: Deploy
+            run: |
+              export DEPLOY_TOKEN="$(sirr get DEPLOY_TOKEN)"
+              ./deploy.sh
+
+          # DEPLOY_TOKEN is already burned --
+          # replaying this job will fail at the get step
+    ```
+
+  </Col>
+</Row>
+
+<Note>
+  Even if your CI/CD provider retains environment variables in logs, the secret no longer exists on the Sirr server. There is nothing to exfiltrate.
+</Note>
+
+---
+
+## Team .env sync
+
+Share a complete development environment with a teammate without sending credentials over Slack, email, or git. Push your `.env` file with a short TTL, share the Sirr server address, and let them pull it.
+
+<Row>
+  <Col>
+
+    ### Sender
+
+    ```bash {{ title: 'Push .env' }}
+    sirr push .env --ttl 24h
+    ```
+
+    Every key-value pair in the file is stored as a separate secret with a 24-hour TTL. After 24 hours, the secrets self-destruct regardless of whether they were pulled.
+
+  </Col>
+  <Col>
+
+    ### Receiver
+
+    ```bash {{ title: 'Pull .env' }}
+    export SIRR_SERVER="http://your-sirr-server:8080"
+    export SIRR_TOKEN="shared-token"
+
+    sirr pull .env
+    ```
+
+    The `.env` file is written to the current directory with all secrets populated. The receiver now has a local copy and does not need the Sirr server again.
+
+  </Col>
+</Row>
+
+---
+
+## Contractor access
+
+When onboarding a contractor, push the credentials they need with a TTL that matches the engagement. When the engagement ends, the credentials expire automatically -- no manual revocation, no forgotten service accounts.
+
+<Row>
+  <Col>
+
+    ### Pattern
+
+    1. Push credentials with a TTL matching the contract duration
+    2. Share Sirr server access with the contractor
+    3. The contractor pulls credentials when they start work
+    4. Credentials auto-expire when the engagement ends
+    5. No cleanup step required
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Two-week contractor engagement' }}
+    # Push credentials that expire in 14 days
+    sirr push STAGING_API_KEY="sk-contractor-abc" \
+      --ttl 14d
+
+    sirr push STAGING_DB_URL="postgres://..." \
+      --ttl 14d
+
+    # Contractor pulls on their machine
+    # 14 days later -- credentials are gone
+    ```
+
+  </Col>
+</Row>
+
+If the engagement ends early, revoke access immediately:
+
+```bash {{ title: 'Early revocation' }}
+sirr delete STAGING_API_KEY
+sirr delete STAGING_DB_URL
+```
+
+---
+
+## Security mental model
+
+> The secret is born dying.
+
+Traditional secret management treats credentials as long-lived assets to protect. Sirr inverts this: credentials are liabilities to eliminate. Every secret has a death clock from the moment it is created.
+
+<Row>
+  <Col>
+
+    ### Traditional approach
+
+    - Secrets are created and stored indefinitely
+    - Access is managed through permissions and audit logs
+    - Revocation is a manual, error-prone process
+    - Forgotten secrets accumulate as attack surface
+    - Breach impact grows over time
+
+  </Col>
+  <Col>
+
+    ### Sirr approach
+
+    - Secrets are created with an expiration baked in
+    - Read limits enforce the principle of least privilege
+    - Revocation is automatic -- the secret destroys itself
+    - No forgotten secrets -- everything expires
+    - Breach impact is bounded by TTL
+
+  </Col>
+</Row>
+
+The core principle: **reduce the window of exposure**. A secret that exists for 5 minutes is a smaller liability than one that exists for 5 years. A secret that can be read once is a smaller liability than one with unlimited reads.
+
+<Note>
+  Sirr is not a replacement for a full secrets manager like Vault or AWS Secrets Manager. It is a complement -- use Sirr for the ephemeral, short-lived credentials that those systems handle poorly.
+</Note>

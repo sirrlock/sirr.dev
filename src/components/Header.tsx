@@ -12,6 +12,7 @@ import {
 } from '@/components/MobileNavigation'
 import { MobileSearch, Search } from '@/components/Search'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { useLocale } from '@/i18n/client'
 import { CloseButton } from '@headlessui/react'
 
 function TopLevelNavItem({
@@ -39,6 +40,7 @@ export const Header = forwardRef<
 >(function Header({ className, ...props }, ref) {
   let { isOpen: mobileNavIsOpen } = useMobileNavigationStore()
   let isInsideMobileNavigation = useIsInsideMobileNavigation()
+  const { locale, t } = useLocale()
 
   let { scrollY } = useScroll()
   let bgOpacityLight = useTransform(scrollY, [0, 72], ['50%', '90%'])
@@ -74,25 +76,25 @@ export const Header = forwardRef<
       <Search />
       <div className="flex items-center gap-5 lg:hidden">
         <MobileNavigation />
-        <CloseButton as={Link} href="/" aria-label="Home">
+        <CloseButton as={Link} href={`/${locale}`} aria-label="Home">
           <Logo className="h-6" />
         </CloseButton>
       </div>
       <div className="flex items-center gap-5">
         <nav className="hidden md:block">
           <ul role="list" className="flex items-center gap-8">
-            <TopLevelNavItem href="/">API</TopLevelNavItem>
-            <TopLevelNavItem href="#">Documentation</TopLevelNavItem>
-            <TopLevelNavItem href="#">Support</TopLevelNavItem>
+            <TopLevelNavItem href={`/${locale}`}>
+              {t('nav.topLevel.docs')}
+            </TopLevelNavItem>
+            <TopLevelNavItem href="https://github.com/SirrVault/sirr">
+              {t('nav.topLevel.github')}
+            </TopLevelNavItem>
           </ul>
         </nav>
         <div className="hidden md:block md:h-5 md:w-px md:bg-zinc-900/10 md:dark:bg-white/15" />
         <div className="flex gap-4">
           <MobileSearch />
           <ThemeToggle />
-        </div>
-        <div className="hidden min-[416px]:contents">
-          <Button href="#">Sign in</Button>
         </div>
       </div>
     </motion.div>

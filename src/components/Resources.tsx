@@ -10,10 +10,11 @@ import Link from 'next/link'
 
 import { GridPattern } from '@/components/GridPattern'
 import { Heading } from '@/components/Heading'
-import { ChatBubbleIcon } from '@/components/icons/ChatBubbleIcon'
-import { EnvelopeIcon } from '@/components/icons/EnvelopeIcon'
-import { UserIcon } from '@/components/icons/UserIcon'
-import { UsersIcon } from '@/components/icons/UsersIcon'
+import { BookIcon } from '@/components/icons/BookIcon'
+import { DocumentIcon } from '@/components/icons/DocumentIcon'
+import { BoltIcon } from '@/components/icons/BoltIcon'
+import { CogIcon } from '@/components/icons/CogIcon'
+import { useLocale } from '@/i18n/client'
 
 interface Resource {
   href: string
@@ -26,61 +27,46 @@ interface Resource {
   >
 }
 
-const resources: Array<Resource> = [
-  {
-    href: '/contacts',
-    name: 'Contacts',
-    description:
-      'Learn about the contact model and how to create, retrieve, update, delete, and list contacts.',
-    icon: UserIcon,
-    pattern: {
-      y: 16,
-      squares: [
-        [0, 1],
-        [1, 3],
-      ],
-    },
+const resourceIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  '/api-reference': BookIcon,
+  '/cli': DocumentIcon,
+  '/mcp': BoltIcon,
+  '/sdks': CogIcon,
+}
+
+const resourcePatterns: Record<
+  string,
+  Omit<
+    React.ComponentPropsWithoutRef<typeof GridPattern>,
+    'width' | 'height' | 'x'
+  >
+> = {
+  '/api-reference': {
+    y: 16,
+    squares: [
+      [0, 1],
+      [1, 3],
+    ],
   },
-  {
-    href: '/conversations',
-    name: 'Conversations',
-    description:
-      'Learn about the conversation model and how to create, retrieve, update, delete, and list conversations.',
-    icon: ChatBubbleIcon,
-    pattern: {
-      y: -6,
-      squares: [
-        [-1, 2],
-        [1, 3],
-      ],
-    },
+  '/cli': {
+    y: -6,
+    squares: [
+      [-1, 2],
+      [1, 3],
+    ],
   },
-  {
-    href: '/messages',
-    name: 'Messages',
-    description:
-      'Learn about the message model and how to create, retrieve, update, delete, and list messages.',
-    icon: EnvelopeIcon,
-    pattern: {
-      y: 32,
-      squares: [
-        [0, 2],
-        [1, 4],
-      ],
-    },
+  '/mcp': {
+    y: 32,
+    squares: [
+      [0, 2],
+      [1, 4],
+    ],
   },
-  {
-    href: '/groups',
-    name: 'Groups',
-    description:
-      'Learn about the group model and how to create, retrieve, update, delete, and list groups.',
-    icon: UsersIcon,
-    pattern: {
-      y: 22,
-      squares: [[0, 1]],
-    },
+  '/sdks': {
+    y: 22,
+    squares: [[0, 1]],
   },
-]
+}
 
 function ResourceIcon({ icon: Icon }: { icon: Resource['icon'] }) {
   return (
@@ -132,7 +118,7 @@ function ResourcePattern({
   )
 }
 
-function Resource({ resource }: { resource: Resource }) {
+function ResourceCard({ resource }: { resource: Resource }) {
   let mouseX = useMotionValue(0)
   let mouseY = useMotionValue(0)
 
@@ -171,6 +157,20 @@ function Resource({ resource }: { resource: Resource }) {
 }
 
 export function Resources() {
+  const { locale, translations } = useLocale()
+  const resourceData = (translations.resources ?? []) as Array<{
+    href: string
+    name: string
+    description: string
+  }>
+
+  const resources: Array<Resource> = resourceData.map((r) => ({
+    ...r,
+    href: `/${locale}${r.href}`,
+    icon: resourceIcons[r.href] ?? BookIcon,
+    pattern: resourcePatterns[r.href] ?? { y: 16, squares: [[0, 1]] },
+  }))
+
   return (
     <div className="my-16 xl:max-w-none">
       <Heading level={2} id="resources">
@@ -178,7 +178,7 @@ export function Resources() {
       </Heading>
       <div className="not-prose mt-4 grid grid-cols-1 gap-8 border-t border-zinc-900/5 pt-10 sm:grid-cols-2 xl:grid-cols-4 dark:border-white/5">
         {resources.map((resource) => (
-          <Resource key={resource.href} resource={resource} />
+          <ResourceCard key={resource.href} resource={resource} />
         ))}
       </div>
     </div>

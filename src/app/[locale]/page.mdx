@@ -1,0 +1,43 @@
+import { Guides } from '@/components/Guides'
+import { Resources } from '@/components/Resources'
+import { HeroPattern } from '@/components/HeroPattern'
+
+export const metadata = {
+  title: 'Sirr Documentation',
+  description:
+    'The secret manager built for the AI era. Self-hosted ephemeral secret vault powered by a single Rust binary.',
+}
+
+export const sections = [
+  { title: 'Guides', id: 'guides' },
+  { title: 'Resources', id: 'resources' },
+]
+
+<HeroPattern />
+
+# Sirr Documentation
+
+The secret manager built for the AI era. Every secret expires. By design. {{ className: 'lead' }}
+
+<div className="not-prose mt-6 mb-16 flex gap-3">
+  <Button href="/quickstart" arrow="right">
+    <>Quickstart</>
+  </Button>
+  <Button href="/sdks" variant="outline">
+    <>Explore SDKs</>
+  </Button>
+</div>
+
+## Getting started {{ anchor: false }}
+
+Sirr (pronounced "sirr", Arabic for "secret") is a self-hosted ephemeral secret vault. A single Rust binary handles encryption, storage, and expiry with zero runtime dependencies. Push a secret, set a TTL or read limit, and it destroys itself automatically. {{ className: 'lead' }}
+
+<div className="not-prose">
+  <Button href="/quickstart" variant="text" arrow="right">
+    <>Deploy your first Sirr instance</>
+  </Button>
+</div>
+
+<Guides />
+
+<Resources />

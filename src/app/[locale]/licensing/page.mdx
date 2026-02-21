@@ -1,0 +1,117 @@
+export const metadata = {
+  title: 'Licensing',
+  description:
+    'Sirr licensing: Business Source License 1.1, free tier limits, license key format, Apache 2.0 conversion date, and non-production use policy.',
+}
+
+export const sections = [
+  { title: 'Business Source License', id: 'business-source-license' },
+  { title: 'Free tier', id: 'free-tier' },
+  { title: 'License keys', id: 'license-keys' },
+  { title: 'Apache 2.0 conversion', id: 'apache-conversion' },
+  { title: 'Non-production use', id: 'non-production-use' },
+]
+
+# Licensing
+
+Sirr is source-available under the Business Source License 1.1 (BSL 1.1). You can read, fork, and self-host it freely within the limits described below. {{ className: 'lead' }}
+
+## Business Source License {{ id: 'business-source-license' }}
+
+The BSL 1.1 is a source-available license that allows free use with certain restrictions. The full source code is available on [GitHub](https://github.com/SirrVault/sirr), and you can inspect, build, and run it yourself.
+
+Key terms:
+
+- **Source-available** — The complete source code is public. You can audit every line of encryption, storage, and authentication logic.
+- **Free within limits** — Up to 100 active secrets per instance require no license key and no payment.
+- **Commercial license** — Production deployments exceeding 100 active secrets require a license key.
+- **Time-limited restriction** — The BSL includes an automatic conversion to Apache 2.0 on a fixed date (see below).
+
+---
+
+## Free tier {{ id: 'free-tier' }}
+
+Every Sirr instance supports up to **100 active secrets** with no license key required. Active secrets are those that have not expired and have not been burned by reaching their read limit.
+
+- No sign-up required
+- No license key needed
+- No feature restrictions — all API endpoints, encryption, TTL, and max-read limits work identically
+- The only limit is the number of concurrently active secrets
+
+When you attempt to create a secret that would exceed the 100-secret limit, the server returns a `402 Payment Required` response:
+
+```json {{ title: '402 Response' }}
+{
+  "error": "secret limit reached",
+  "message": "Free tier allows up to 100 active secrets. Set SIRR_LICENSE_KEY to unlock unlimited usage."
+}
+```
+
+---
+
+## License keys {{ id: 'license-keys' }}
+
+License keys follow the format `sirr_lic_` followed by 40 hexadecimal characters:
+
+```
+sirr_lic_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+```
+
+### Obtaining a key
+
+Purchase a license at [secretdrop.app/sirr](https://secretdrop.app/sirr). You will receive your key immediately after purchase.
+
+### Setting the key
+
+Pass the license key as an environment variable when starting the server:
+
+```bash {{ title: 'Set license key' }}
+export SIRR_LICENSE_KEY="sirr_lic_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+sirr serve
+```
+
+Or in Docker:
+
+```bash {{ title: 'Docker with license key' }}
+docker run -d \
+  --name sirr \
+  -p 8080:8080 \
+  -v ./sirr-data:/data \
+  -e SIRR_MASTER_KEY="your-master-key" \
+  -e SIRR_LICENSE_KEY="sirr_lic_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2" \
+  -e SIRR_DATA_DIR=/data \
+  ghcr.io/sirrvault/sirr
+```
+
+The server validates the license key at startup. Once validated, there is no limit on the number of active secrets.
+
+---
+
+## Apache 2.0 conversion {{ id: 'apache-conversion' }}
+
+On **February 20, 2028**, the Sirr source code automatically converts from BSL 1.1 to the **Apache License 2.0**. After this date:
+
+- All usage restrictions are permanently removed
+- The code becomes fully open source under Apache 2.0
+- No license key is required for any deployment size
+- The change is irrevocable
+
+This conversion date is written into the license file in the repository and cannot be changed retroactively.
+
+<Note>
+  The BSL 1.1 conversion clause guarantees that Sirr will become fully open source. This protects users from vendor lock-in while allowing the project to sustain itself commercially during the initial period.
+</Note>
+
+---
+
+## Non-production use {{ id: 'non-production-use' }}
+
+All non-production use is **always free**, regardless of the number of active secrets. This includes:
+
+- **Development** — local development environments
+- **Staging** — pre-production staging environments
+- **CI/CD** — continuous integration and testing pipelines
+- **Testing** — automated and manual testing
+- **Evaluation** — trying Sirr before committing to a production deployment
+
+No license key is needed for any of these use cases. The 100-secret limit and license requirement apply only to production deployments.

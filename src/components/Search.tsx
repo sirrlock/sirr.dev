@@ -22,6 +22,7 @@ import {
 import Highlighter from 'react-highlight-words'
 
 import { navigation } from '@/components/Navigation'
+import { useLocale } from '@/i18n/client'
 import { type Result } from '@/mdx/search.mjs'
 import { useMobileNavigationStore } from './MobileNavigation'
 
@@ -34,7 +35,13 @@ type Autocomplete = AutocompleteApi<
   React.KeyboardEvent
 >
 
-function useAutocomplete({ onNavigate }: { onNavigate: () => void }) {
+function useAutocomplete({
+  onNavigate,
+  locale,
+}: {
+  onNavigate: () => void
+  locale: string
+}) {
   let id = useId()
   let router = useRouter()
   let [autocompleteState, setAutocompleteState] = useState<
@@ -74,9 +81,14 @@ function useAutocomplete({ onNavigate }: { onNavigate: () => void }) {
             {
               sourceId: 'documentation',
               getItems() {
-                return search(query, { limit: 5 })
+                let results = search(query, { limit: 5 })
+                // Prepend locale to search result URLs
+                return results.map((r: Result) => ({
+                  ...r,
+                  url: `/${locale}${r.url}`,
+                }))
               },
-              getItemUrl({ item }) {
+              getItemUrl({ item }: { item: Result }) {
                 return item.url
               },
               onSelect: navigate,
@@ -169,8 +181,10 @@ function SearchResult({
 }) {
   let id = useId()
 
+  // Strip locale prefix for navigation matching
+  let urlPath = result.url.split('#')[0].replace(/^\/[a-z]{2}(\/|$)/, '/$1')
   let sectionTitle = navigation.find((section) =>
-    section.links.find((link) => link.href === result.url.split('#')[0]),
+    section.links.find((link) => link.href === urlPath),
   )?.title
   let hierarchy = [sectionTitle, result.pageTitle].filter(
     (x): x is string => typeof x === 'string',
@@ -323,7 +337,9 @@ function SearchDialog({
   let formRef = useRef<React.ElementRef<'form'>>(null)
   let panelRef = useRef<React.ElementRef<'div'>>(null)
   let inputRef = useRef<React.ElementRef<typeof SearchInput>>(null)
+  let { locale } = useLocale()
   let { autocomplete, autocompleteState } = useAutocomplete({
+    locale,
     onNavigate() {
       onNavigate()
       setOpen(false)

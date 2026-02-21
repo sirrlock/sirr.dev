@@ -1,56 +1,54 @@
+'use client'
+
 import Image from 'next/image'
 
 import { Button } from '@/components/Button'
 import { Heading } from '@/components/Heading'
-import logoGo from '@/images/logos/go.svg'
+import { useLocale } from '@/i18n/client'
 import logoNode from '@/images/logos/node.svg'
-import logoPhp from '@/images/logos/php.svg'
 import logoPython from '@/images/logos/python.svg'
-import logoRuby from '@/images/logos/ruby.svg'
 
-const libraries = [
-  {
-    href: '#',
-    name: 'PHP',
-    description:
-      'A popular general-purpose scripting language that is especially suited to web development.',
-    logo: logoPhp,
-  },
-  {
-    href: '#',
-    name: 'Ruby',
-    description:
-      'A dynamic, open source programming language with a focus on simplicity and productivity.',
-    logo: logoRuby,
-  },
-  {
-    href: '#',
-    name: 'Node.js',
-    description:
-      'Node.js® is an open-source, cross-platform JavaScript runtime environment.',
-    logo: logoNode,
-  },
-  {
-    href: '#',
-    name: 'Python',
-    description:
-      'Python is a programming language that lets you work quickly and integrate systems more effectively.',
-    logo: logoPython,
-  },
-  {
-    href: '#',
-    name: 'Go',
-    description:
-      'An open-source programming language supported by Google with built-in concurrency.',
-    logo: logoGo,
-  },
-]
+const logoMap: Record<string, typeof logoNode | null> = {
+  'Node.js': logoNode,
+  Python: logoPython,
+  '.NET': null,
+  'Rust CLI': null,
+}
+
+function LanguageIcon({
+  name,
+  className,
+}: {
+  name: string
+  className?: string
+}) {
+  const logo = logoMap[name]
+  if (logo) {
+    return <Image src={logo} alt="" className={className} unoptimized />
+  }
+
+  // Fallback text icon for languages without a logo image
+  return (
+    <div
+      className={`flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 text-xs font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 ${className ?? ''}`}
+    >
+      {name === '.NET' ? '.N' : 'Rs'}
+    </div>
+  )
+}
 
 export function Libraries() {
+  const { t, translations } = useLocale()
+  const libraries = (translations.libraries ?? []) as Array<{
+    name: string
+    description: string
+    href: string
+  }>
+
   return (
     <div className="my-16 xl:max-w-none">
       <Heading level={2} id="official-libraries">
-        Official libraries
+        {t('common.officialLibraries')}
       </Heading>
       <div className="not-prose mt-4 grid grid-cols-1 gap-x-6 gap-y-10 border-t border-zinc-900/5 pt-10 sm:grid-cols-2 xl:max-w-none xl:grid-cols-3 dark:border-white/5">
         {libraries.map((library) => (
@@ -64,16 +62,11 @@ export function Libraries() {
               </p>
               <p className="mt-4">
                 <Button href={library.href} variant="text" arrow="right">
-                  Read more
+                  {t('common.readMore')}
                 </Button>
               </p>
             </div>
-            <Image
-              src={library.logo}
-              alt=""
-              className="h-12 w-12"
-              unoptimized
-            />
+            <LanguageIcon name={library.name} className="h-12 w-12" />
           </div>
         ))}
       </div>

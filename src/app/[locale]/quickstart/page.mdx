@@ -1,0 +1,167 @@
+export const metadata = {
+  title: 'Quickstart',
+  description:
+    'Get Sirr running in under a minute. Install the server, push your first secret, and retrieve it before it self-destructs.',
+}
+
+export const sections = [
+  { title: 'Install', id: 'install' },
+  { title: 'Push your first secret', id: 'push-your-first-secret' },
+  { title: 'Retrieve a secret', id: 'retrieve-a-secret' },
+  { title: 'What is next', id: 'what-is-next' },
+]
+
+# Quickstart
+
+Get Sirr running in under a minute. Push your first secret, retrieve it, and watch it self-destruct. {{ className: 'lead' }}
+
+<Note>
+  Sirr requires a `SIRR_MASTER_KEY` to start. This key is used both as the bearer token for API authentication and as the seed for encrypting all stored secrets. Keep it safe.
+</Note>
+
+## Install
+
+Choose your preferred installation method. Docker is the fastest way to get started.
+
+<CodeGroup>
+
+```bash {{ title: 'Docker' }}
+docker run -d \
+  --name sirr \
+  -p 8080:8080 \
+  -v ./sirr-data:/data \
+  -e SIRR_MASTER_KEY="$(openssl rand -hex 32)" \
+  -e SIRR_DATA_DIR=/data \
+  ghcr.io/sirrvault/sirr
+```
+
+```bash {{ title: 'Homebrew' }}
+brew tap sirrvault/tap
+brew install sirr
+```
+
+```bash {{ title: 'Binary download' }}
+# Download the latest release for your platform
+curl -fsSL https://get.sirr.dev | sh
+```
+
+```bash {{ title: 'Cargo' }}
+cargo install sirr
+```
+
+</CodeGroup>
+
+If you installed via Homebrew, binary download, or Cargo, start the server manually:
+
+```bash {{ title: 'Start the server' }}
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+sirr serve
+```
+
+The server is now listening on `http://localhost:8080`. The master key was printed to your terminal -- save it somewhere safe.
+
+## Push your first secret
+
+Push a secret with a TTL of 1 hour and a maximum of 1 read. Once the secret is read or the TTL expires, it is permanently destroyed.
+
+<CodeGroup>
+
+```bash {{ title: 'CLI' }}
+sirr push DB_URL="postgres://user:pass@db:5432/myapp" \
+  --reads 1 \
+  --ttl 1h
+```
+
+```bash {{ title: 'cURL' }}
+curl -X POST http://localhost:8080/secrets \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "DB_URL",
+    "value": "postgres://user:pass@db:5432/myapp",
+    "max_reads": 1,
+    "ttl": "1h"
+  }'
+```
+
+```js {{ title: 'Node.js' }}
+import { Sirr } from '@sirr/node'
+
+const sirr = new Sirr({
+  server: 'http://localhost:8080',
+  token: process.env.SIRR_TOKEN,
+})
+
+await sirr.push('DB_URL', 'postgres://user:pass@db:5432/myapp', {
+  maxReads: 1,
+  ttl: '1h',
+})
+```
+
+```python {{ title: 'Python' }}
+from sirr import Sirr
+
+sirr = Sirr(
+    server="http://localhost:8080",
+    token=os.environ["SIRR_TOKEN"],
+)
+
+sirr.push("DB_URL", "postgres://user:pass@db:5432/myapp", max_reads=1, ttl="1h")
+```
+
+</CodeGroup>
+
+## Retrieve a secret
+
+Retrieve the secret by its key. If `max_reads` was set to 1, this will be the only time you can read it.
+
+<CodeGroup>
+
+```bash {{ title: 'CLI' }}
+sirr get DB_URL
+```
+
+```bash {{ title: 'cURL' }}
+curl http://localhost:8080/secrets/DB_URL \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY"
+```
+
+```js {{ title: 'Node.js' }}
+const secret = await sirr.get('DB_URL')
+console.log(secret.value)
+```
+
+```python {{ title: 'Python' }}
+secret = sirr.get("DB_URL")
+print(secret.value)
+```
+
+</CodeGroup>
+
+You can also delete a secret before it expires:
+
+```bash {{ title: 'Delete a secret' }}
+sirr delete DB_URL
+```
+
+### Push and pull .env files
+
+Sirr has first-class support for `.env` files. Push an entire file and pull it back on another machine:
+
+```bash {{ title: 'Push and pull .env' }}
+# Push your .env file with a 24-hour TTL
+sirr push .env --ttl 24h
+
+# On another machine, pull it back
+sirr pull .env
+```
+
+## What is next
+
+You have a running Sirr instance and know the basics. Here is where to go from here:
+
+- [Architecture](/architecture) -- understand how Sirr encrypts and stores secrets
+- [API Reference](/api-reference) -- full HTTP API documentation
+- [Configuration](/configuration) -- all environment variables and options
+- [MCP Server](/mcp) -- integrate Sirr with AI agents via the Model Context Protocol
+- [SDKs](/sdks) -- official client libraries for Node.js, Python, and .NET

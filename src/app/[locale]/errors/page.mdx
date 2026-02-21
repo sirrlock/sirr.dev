@@ -1,0 +1,232 @@
+export const metadata = {
+  title: 'Errors',
+  description:
+    'Learn about the error responses returned by the Sirr API, including status codes, the error format, and how to troubleshoot common issues.',
+}
+
+export const sections = [
+  { title: 'Status codes', id: 'status-codes' },
+  { title: 'Error response format', id: 'error-response-format' },
+  { title: 'Common errors', id: 'common-errors' },
+]
+
+# Errors
+
+When something goes wrong with an API request, Sirr returns a consistent JSON error response with an appropriate HTTP status code. This guide covers every status code the API uses, the error response shape, and how to troubleshoot the most common issues. {{ className: 'lead' }}
+
+---
+
+## Status codes
+
+Sirr uses conventional HTTP status codes to indicate the outcome of a request. Successful operations return `2xx` codes; client mistakes return `4xx`; and server-side failures return `5xx`.
+
+<Properties>
+  <Property name="200 OK">
+    The request succeeded. Returned for successful `GET` and `DELETE` operations.
+  </Property>
+  <Property name="201 Created">
+    A new secret was stored. Returned when `POST /secrets` succeeds.
+  </Property>
+  <Property name="400 Bad Request">
+    The request body is malformed or missing required fields.
+  </Property>
+  <Property name="401 Unauthorized">
+    The `Authorization` header is missing or contains an invalid bearer token.
+  </Property>
+  <Property name="402 Payment Required">
+    The free-tier limit of 100 active secrets has been reached and no valid `SIRR_LICENSE_KEY` is configured.
+  </Property>
+  <Property name="404 Not Found">
+    The requested secret does not exist — it may have expired, been burned after reaching its read limit, or was never created.
+  </Property>
+  <Property name="500 Internal Server Error">
+    An unexpected server-side failure occurred, such as a database or encryption error.
+  </Property>
+</Properties>
+
+---
+
+## Error response format
+
+<Row>
+  <Col>
+
+    Every error response has the same shape: a single JSON object with an `error` key containing a human-readable message. The HTTP status code carries the machine-readable classification.
+
+    There are no error codes or nested objects — the combination of status code and message string is all you need to diagnose the problem.
+
+  </Col>
+  <Col>
+
+    ```json {{ title: 'Error response' }}
+    {
+      "error": "descriptive message"
+    }
+    ```
+
+  </Col>
+</Row>
+
+<Note>
+  The `error` string is intended for developers, not end users. Its wording may
+  change between releases — do not match against it programmatically. Rely on
+  the HTTP status code instead.
+</Note>
+
+---
+
+## Common errors
+
+Below are the errors you are most likely to encounter during development, along with their causes and fixes.
+
+### 400 — Bad Request
+
+<Row>
+  <Col>
+
+    Returned when the request body is missing a required field or contains an invalid value. The `POST /secrets` endpoint requires both `key` and `value` in the JSON body.
+
+    **Typical causes:**
+
+    - Missing `key` or `value` in the request body
+    - Sending a non-JSON content type
+    - Empty string for `key`
+
+    **Fix:** Ensure your request body is valid JSON with both `key` and `value` fields populated.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Missing required field' }}
+    curl -X POST http://localhost:8080/secrets \
+      -H "Authorization: Bearer $SIRR_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"key": "db/password"}'
+    ```
+
+    ```json {{ title: 'Response — 400' }}
+    {
+      "error": "missing required field: value"
+    }
+    ```
+
+  </Col>
+</Row>
+
+### 401 — Unauthorized
+
+<Row>
+  <Col>
+
+    Returned when the bearer token is missing or does not match the server's `SIRR_MASTER_KEY`. The comparison is constant-time to prevent timing attacks.
+
+    **Typical causes:**
+
+    - `Authorization` header omitted entirely
+    - Token value does not match `SIRR_MASTER_KEY`
+    - Extra whitespace or encoding issues in the token
+
+    **Fix:** Verify that the token you are sending matches the `SIRR_MASTER_KEY` the server was started with. Check for trailing newlines if loading from a file.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Invalid token' }}
+    curl http://localhost:8080/secrets \
+      -H "Authorization: Bearer wrong-token"
+    ```
+
+    ```json {{ title: 'Response — 401' }}
+    {
+      "error": "unauthorized"
+    }
+    ```
+
+  </Col>
+</Row>
+
+### 402 — Payment Required
+
+<Row>
+  <Col>
+
+    Sirr's free tier allows up to 100 active (non-expired, non-burned) secrets per instance. Once this limit is reached, `POST /secrets` returns `402` until you either let secrets expire, delete them, or add a valid license key.
+
+    **Fix:** Set `SIRR_LICENSE_KEY` in your environment to unlock unlimited secrets, or remove secrets you no longer need.
+
+  </Col>
+  <Col>
+
+    ```json {{ title: 'Response — 402' }}
+    {
+      "error": "free tier limit reached: 100 active secrets. set SIRR_LICENSE_KEY to unlock unlimited usage"
+    }
+    ```
+
+  </Col>
+</Row>
+
+### 404 — Not Found
+
+<Row>
+  <Col>
+
+    The secret you requested does not exist. Because Sirr is an ephemeral vault, this is expected behavior in many cases.
+
+    **Typical causes:**
+
+    - The secret's TTL expired and it was automatically purged
+    - The secret was burned after reaching its configured read limit
+    - The key was never created in the first place
+    - A typo in the secret key
+
+    **Fix:** Secrets are intentionally short-lived. If you need the value again, re-push it. Use `reads` and `ttl` parameters to control secret lifetime.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Expired or burned secret' }}
+    curl http://localhost:8080/secrets/db/password \
+      -H "Authorization: Bearer $SIRR_TOKEN"
+    ```
+
+    ```json {{ title: 'Response — 404' }}
+    {
+      "error": "secret not found"
+    }
+    ```
+
+  </Col>
+</Row>
+
+### 500 — Internal Server Error
+
+<Row>
+  <Col>
+
+    An unexpected failure on the server side. This typically indicates a problem with the embedded database or the encryption layer.
+
+    **Typical causes:**
+
+    - Disk full or filesystem permissions prevent database writes
+    - Corrupted database file
+    - Encryption or decryption failure (rare)
+
+    **Fix:** Enable debug logging to get more detail, then check disk space and file permissions on the data directory.
+
+    ```bash {{ title: 'Enable debug logging' }}
+    export SIRR_LOG_LEVEL=debug
+    sirr
+    ```
+
+  </Col>
+  <Col>
+
+    ```json {{ title: 'Response — 500' }}
+    {
+      "error": "internal server error"
+    }
+    ```
+
+  </Col>
+</Row>

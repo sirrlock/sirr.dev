@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "siteTitle": "Sirr",
+    "siteTitleTemplate": "%s - Sirr Docs",
+    "siteDescription": "Documentation for Sirr — the ephemeral secret vault built for the AI era.",
+    "pages": {
+      "/": {
+        "title": "Sirr Documentation",
+        "description": "Documentation for Sirr — the ephemeral secret vault built for the AI era. Push secrets with TTL and read limits."
+      },
+      "/quickstart": {
+        "title": "Quickstart",
+        "description": "Get started with Sirr in minutes. Install, configure, and push your first ephemeral secret."
+      },
+      "/architecture": {
+        "title": "Architecture",
+        "description": "How Sirr encrypts, stores, and expires secrets using ChaCha20Poly1305, Argon2id, and redb."
+      },
+      "/configuration": {
+        "title": "Configuration",
+        "description": "All environment variables and configuration options for the Sirr server and CLI clients."
+      },
+      "/authentication": {
+        "title": "Authentication",
+        "description": "How to authenticate with the Sirr API using bearer tokens."
+      },
+      "/errors": {
+        "title": "Errors",
+        "description": "HTTP status codes, error response format, and troubleshooting for the Sirr API."
+      },
+      "/sdks": {
+        "title": "SDKs",
+        "description": "Official Sirr client libraries for Node.js, Python, and .NET."
+      },
+      "/api-reference": {
+        "title": "API Reference",
+        "description": "Complete HTTP API reference for all 6 Sirr server endpoints."
+      },
+      "/deployment": {
+        "title": "Deployment",
+        "description": "Deploy Sirr with Docker, Homebrew, binary download, or build from source."
+      },
+      "/self-hosting": {
+        "title": "Self-Hosting",
+        "description": "Production deployment guide with reverse proxy, TLS, backups, and monitoring."
+      },
+      "/security": {
+        "title": "Security",
+        "description": "Sirr's threat model, encryption details, and zero-trust design principles."
+      },
+      "/licensing": {
+        "title": "Licensing",
+        "description": "BSL 1.1 license details, free tier limits, and commercial licensing for Sirr."
+      },
+      "/cli": {
+        "title": "CLI Reference",
+        "description": "Complete reference for all 9 Sirr CLI commands with examples."
+      },
+      "/mcp": {
+        "title": "MCP Server",
+        "description": "Set up the Sirr MCP server for Claude Code AI integration."
+      },
+      "/ai-workflows": {
+        "title": "AI Workflows",
+        "description": "Patterns for using Sirr with AI agents, CI/CD pipelines, and team workflows."
+      }
+    }
+  },
+  "nav": {
+    "groups": {
+      "guides": "Guides",
+      "server": "Server",
+      "tools": "Tools"
+    },
+    "links": {
+      "introduction": "Introduction",
+      "quickstart": "Quickstart",
+      "architecture": "Architecture",
+      "configuration": "Configuration",
+      "authentication": "Authentication",
+      "errors": "Errors",
+      "sdks": "SDKs",
+      "apiReference": "API Reference",
+      "deployment": "Deployment",
+      "selfHosting": "Self-Hosting",
+      "security": "Security",
+      "licensing": "Licensing",
+      "cli": "CLI Reference",
+      "mcp": "MCP Server",
+      "aiWorkflows": "AI Workflows"
+    },
+    "topLevel": {
+      "docs": "Docs",
+      "github": "GitHub"
+    }
+  },
+  "common": {
+    "readMore": "Read more",
+    "previous": "Previous",
+    "next": "Next",
+    "copyright": "Copyright {year}. All rights reserved.",
+    "getStarted": "Get started",
+    "exploreSDKs": "Explore SDKs",
+    "officialLibraries": "Official libraries",
+    "followOnX": "Follow us on X",
+    "followOnGithub": "Follow us on GitHub",
+    "joinDiscord": "Join our Discord server"
+  },
+  "home": {
+    "heroTitle": "Sirr Documentation",
+    "heroLead": "The secret manager built for the AI era. Every secret expires. By design. Push secrets with TTL and read limits — once conditions are met, the secret is gone.",
+    "gettingStarted": "Getting started",
+    "gettingStartedLead": "Install Sirr as a single binary or Docker container, configure your master key, and start pushing ephemeral secrets in minutes."
+  },
+  "guides": [
+    {
+      "href": "/quickstart",
+      "name": "Quickstart",
+      "description": "Install Sirr and push your first secret in under two minutes."
+    },
+    {
+      "href": "/architecture",
+      "name": "Architecture",
+      "description": "Understand how Sirr encrypts, stores, and expires secrets."
+    },
+    {
+      "href": "/security",
+      "name": "Security",
+      "description": "Threat model, encryption details, and zero-trust design."
+    },
+    {
+      "href": "/ai-workflows",
+      "name": "AI Workflows",
+      "description": "Patterns for using Sirr with Claude, LangChain, and CI/CD."
+    }
+  ],
+  "resources": [
+    {
+      "href": "/api-reference",
+      "name": "API Reference",
+      "description": "Complete HTTP API reference for creating, retrieving, and managing ephemeral secrets."
+    },
+    {
+      "href": "/cli",
+      "name": "CLI Reference",
+      "description": "All 9 CLI commands for pushing, pulling, and managing secrets from the terminal."
+    },
+    {
+      "href": "/mcp",
+      "name": "MCP Server",
+      "description": "Connect Sirr to Claude Code for AI-native secret management."
+    },
+    {
+      "href": "/sdks",
+      "name": "SDKs",
+      "description": "Official client libraries for Node.js, Python, and .NET."
+    }
+  ],
+  "libraries": [
+    {
+      "name": "Node.js",
+      "description": "@sirr/node — TypeScript client with zero dependencies. Native fetch.",
+      "href": "https://github.com/SirrVault/node"
+    },
+    {
+      "name": "Python",
+      "description": "sirr — Sync and async client built on httpx.",
+      "href": "https://github.com/SirrVault/python"
+    },
+    {
+      "name": ".NET",
+      "description": "Sirr.Client — Async-first client built on HttpClient.",
+      "href": "https://github.com/SirrVault/dotnet"
+    },
+    {
+      "name": "Rust CLI",
+      "description": "The sirr binary doubles as a full-featured CLI client.",
+      "href": "https://github.com/SirrVault/sirr"
+    }
+  ]
+}

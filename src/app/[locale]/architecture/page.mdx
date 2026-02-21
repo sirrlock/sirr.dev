@@ -1,0 +1,179 @@
+export const metadata = {
+  title: 'Architecture',
+  description:
+    'How Sirr encrypts, stores, and expires secrets. A single Rust binary with Argon2id key derivation, ChaCha20Poly1305 encryption, and redb embedded storage.',
+}
+
+export const sections = [
+  { title: 'Encryption flow', id: 'encryption-flow' },
+  { title: 'Storage model', id: 'storage-model' },
+  { title: 'Request lifecycle', id: 'request-lifecycle' },
+  { title: 'Expiry model', id: 'expiry-model' },
+  { title: 'Design decisions', id: 'design-decisions' },
+]
+
+# Architecture
+
+Sirr is a single Rust binary that handles encryption, storage, authentication, and automatic secret expiry. No sidecars, no external databases, no runtime dependencies. {{ className: 'lead' }}
+
+## Encryption flow
+
+Every secret stored in Sirr is encrypted at rest using ChaCha20Poly1305. The encryption key is derived from your `SIRR_MASTER_KEY` using Argon2id, a memory-hard key derivation function.
+
+### Key derivation
+
+On first startup, Sirr generates a `sirr.salt` file containing 32 cryptographically random bytes. This salt is stored alongside the database and must not be deleted. The master key is then derived as follows:
+
+```text {{ title: 'Key derivation' }}
+SIRR_MASTER_KEY (user-provided)
+       |
+       v
+  Argon2id (64 MiB memory, 3 iterations, sirr.salt)
+       |
+       v
+  32-byte derived encryption key
+```
+
+<Note>
+  The Argon2id parameters (64 MiB memory cost, 3 iterations) are chosen to make brute-force attacks impractical while keeping derivation fast enough for server startup. The derived key material is held in memory using `ZeroizeOnDrop`, ensuring it is wiped when the server shuts down.
+</Note>
+
+### Per-record encryption
+
+Each secret gets its own random 12-byte nonce, generated from a cryptographically secure random number generator. The secret value is then encrypted:
+
+```text {{ title: 'Per-record encryption' }}
+plaintext value + derived key + random 12-byte nonce
+       |
+       v
+  ChaCha20Poly1305 encrypt
+       |
+       v
+  (nonce || ciphertext || auth_tag) → stored in redb
+```
+
+Decryption reverses the process: the nonce is read from the stored record, and the derived key decrypts the ciphertext while verifying the authentication tag.
+
+## Storage model
+
+Sirr uses **redb**, an embedded key-value database written in Rust. The entire database lives in a single file.
+
+<Row>
+  <Col>
+    ### Files on disk
+
+    Sirr stores two files in its data directory:
+
+    - `sirr.db` -- the redb database containing all encrypted secrets and metadata
+    - `sirr.salt` -- 32 random bytes generated on first run, used for Argon2id key derivation
+
+    Both files are required. Losing `sirr.salt` means existing secrets cannot be decrypted, even with the correct master key.
+  </Col>
+  <Col>
+    ### Data directory defaults
+
+    The data directory is platform-specific unless overridden by `SIRR_DATA_DIR`:
+
+    | Platform | Path |
+    | --- | --- |
+    | Linux | `~/.local/share/sirr/` |
+    | macOS | `~/Library/Application Support/sirr/` |
+    | Windows | `%APPDATA%\sirr\` |
+  </Col>
+</Row>
+
+### Record structure
+
+Each record in the database stores:
+
+<Properties>
+  <Property name="key" type="string">
+    The secret identifier (e.g., `DB_URL`). Used as the redb key.
+  </Property>
+  <Property name="nonce" type="[u8; 12]">
+    Random 12-byte nonce unique to this record.
+  </Property>
+  <Property name="ciphertext" type="Vec<u8>">
+    The encrypted secret value with appended authentication tag.
+  </Property>
+  <Property name="created_at" type="u64">
+    Unix timestamp of when the secret was created.
+  </Property>
+  <Property name="ttl" type="Option<u64>">
+    Time-to-live in seconds from creation. `None` means no TTL.
+  </Property>
+  <Property name="max_reads" type="Option<u32>">
+    Maximum number of reads allowed. `None` means unlimited.
+  </Property>
+  <Property name="reads" type="u32">
+    Current read counter, incremented on each successful GET.
+  </Property>
+</Properties>
+
+## Request lifecycle
+
+Every API request follows the same path through the server:
+
+```text {{ title: 'Request lifecycle' }}
+Client request
+       |
+       v
+  Bearer token auth (constant-time comparison against SIRR_MASTER_KEY)
+       |
+       v
+  Route handler (push / get / delete / list / prune)
+       |
+       v
+  Encrypt or decrypt value using derived key
+       |
+       v
+  redb read or write (ACID transaction)
+       |
+       v
+  JSON response to client
+```
+
+Authentication uses constant-time comparison to prevent timing attacks against the master key. The same `SIRR_MASTER_KEY` that seeds encryption is used as the bearer token -- there is only one credential to manage.
+
+## Expiry model
+
+Secrets in Sirr expire through two mechanisms, either of which can trigger deletion:
+
+<Row>
+  <Col>
+    ### TTL (time-to-live)
+
+    Set a wallclock duration when pushing a secret. Once the TTL elapses, the secret is eligible for deletion. TTL is evaluated against the `created_at` timestamp and the current server time.
+  </Col>
+  <Col>
+    ### Max reads
+
+    Set a read counter limit when pushing a secret. Each successful GET increments the counter. When `reads >= max_reads`, the secret is deleted immediately after the response is sent.
+  </Col>
+</Row>
+
+### Eviction strategy
+
+Expired secrets are cleaned up through three mechanisms:
+
+1. **Lazy eviction on read** -- when a secret is requested, Sirr checks TTL and read count before returning it. If expired, the secret is deleted and a 404 is returned.
+2. **Background sweep** -- a periodic background task scans the database and removes expired secrets.
+3. **Manual prune** -- `POST /prune` triggers an immediate scan and removes all expired secrets. Returns the count of pruned records.
+
+<Note>
+  Secrets are cryptographically destroyed on deletion. The ciphertext, nonce, and metadata are removed from the database. There is no soft-delete or recovery mechanism.
+</Note>
+
+## Design decisions
+
+### Why ChaCha20Poly1305
+
+ChaCha20Poly1305 is an AEAD cipher that is safe to use in software-only environments. Unlike AES-GCM, it does not require hardware AES-NI instructions to resist timing side-channels. With 12-byte random nonces and the expected volume of secrets per instance, nonce collision probability is negligible.
+
+### Why Argon2id
+
+Argon2id combines the side-channel resistance of Argon2i with the GPU/ASIC resistance of Argon2d. The 64 MiB memory cost ensures that brute-forcing the master key requires significant memory per attempt, making large-scale parallel attacks impractical.
+
+### Why redb
+
+redb is a single-file, embedded, ACID-compliant database written in pure Rust. It requires no external processes, no TCP connections, and no configuration. This aligns with Sirr's goal of being a single binary with zero runtime dependencies. The entire data store is one file that can be backed up with a simple copy.

@@ -53,13 +53,15 @@ export default function Search(nextConfig = {}) {
         test: __filename,
         use: [
           createLoader(function () {
-            let appDir = path.resolve('./src/app')
-            this.addContextDependency(appDir)
+            // Scan MDX files inside the [locale] directory
+            let localeDir = path.resolve('./src/app/[locale]')
+            this.addContextDependency(localeDir)
 
-            let files = glob.sync('**/*.mdx', { cwd: appDir })
+            let files = glob.sync('**/page.mdx', { cwd: localeDir })
             let data = files.map((file) => {
+              // Strip page.mdx to get the URL path (without locale prefix)
               let url = '/' + file.replace(/(^|\/)page\.mdx$/, '')
-              let mdx = fs.readFileSync(path.join(appDir, file), 'utf8')
+              let mdx = fs.readFileSync(path.join(localeDir, file), 'utf8')
 
               let sections = []
 

@@ -10,6 +10,7 @@ import { Button } from '@/components/Button'
 import { useIsInsideMobileNavigation } from '@/components/MobileNavigation'
 import { useSectionStore } from '@/components/SectionProvider'
 import { Tag } from '@/components/Tag'
+import { useLocale } from '@/i18n/client'
 import { remToPx } from '@/lib/remToPx'
 import { CloseButton } from '@headlessui/react'
 
@@ -155,9 +156,6 @@ function NavigationGroup({
   group: NavGroup
   className?: string
 }) {
-  // If this is the mobile navigation then we always render the initial
-  // state, so that the state does not change during the close animation.
-  // The state will still update when we re-open (re-render) the navigation.
   let isInsideMobileNavigation = useIsInsideMobileNavigation()
   let [pathname, sections] = useInitialValue(
     [usePathname(), useSectionStore((s) => s.sections)],
@@ -232,50 +230,104 @@ function NavigationGroup({
   )
 }
 
+export function useNavigation(): Array<NavGroup> {
+  const { locale, t } = useLocale()
+  const prefix = `/${locale}`
+
+  return [
+    {
+      title: t('nav.groups.guides'),
+      links: [
+        { title: t('nav.links.introduction'), href: `${prefix}` },
+        { title: t('nav.links.quickstart'), href: `${prefix}/quickstart` },
+        { title: t('nav.links.architecture'), href: `${prefix}/architecture` },
+        {
+          title: t('nav.links.configuration'),
+          href: `${prefix}/configuration`,
+        },
+        {
+          title: t('nav.links.authentication'),
+          href: `${prefix}/authentication`,
+        },
+        { title: t('nav.links.errors'), href: `${prefix}/errors` },
+        { title: t('nav.links.sdks'), href: `${prefix}/sdks` },
+      ],
+    },
+    {
+      title: t('nav.groups.server'),
+      links: [
+        { title: t('nav.links.apiReference'), href: `${prefix}/api-reference` },
+        { title: t('nav.links.deployment'), href: `${prefix}/deployment` },
+        { title: t('nav.links.selfHosting'), href: `${prefix}/self-hosting` },
+        { title: t('nav.links.security'), href: `${prefix}/security` },
+        { title: t('nav.links.licensing'), href: `${prefix}/licensing` },
+      ],
+    },
+    {
+      title: t('nav.groups.tools'),
+      links: [
+        { title: t('nav.links.cli'), href: `${prefix}/cli` },
+        { title: t('nav.links.mcp'), href: `${prefix}/mcp` },
+        { title: t('nav.links.aiWorkflows'), href: `${prefix}/ai-workflows` },
+      ],
+    },
+  ]
+}
+
+// Static navigation for search indexing and footer page navigation
 export const navigation: Array<NavGroup> = [
   {
     title: 'Guides',
     links: [
       { title: 'Introduction', href: '/' },
       { title: 'Quickstart', href: '/quickstart' },
-      { title: 'SDKs', href: '/sdks' },
+      { title: 'Architecture', href: '/architecture' },
+      { title: 'Configuration', href: '/configuration' },
       { title: 'Authentication', href: '/authentication' },
-      { title: 'Pagination', href: '/pagination' },
       { title: 'Errors', href: '/errors' },
-      { title: 'Webhooks', href: '/webhooks' },
+      { title: 'SDKs', href: '/sdks' },
     ],
   },
   {
-    title: 'Resources',
+    title: 'Server',
     links: [
-      { title: 'Contacts', href: '/contacts' },
-      { title: 'Conversations', href: '/conversations' },
-      { title: 'Messages', href: '/messages' },
-      { title: 'Groups', href: '/groups' },
-      { title: 'Attachments', href: '/attachments' },
+      { title: 'API Reference', href: '/api-reference' },
+      { title: 'Deployment', href: '/deployment' },
+      { title: 'Self-Hosting', href: '/self-hosting' },
+      { title: 'Security', href: '/security' },
+      { title: 'Licensing', href: '/licensing' },
+    ],
+  },
+  {
+    title: 'Tools',
+    links: [
+      { title: 'CLI Reference', href: '/cli' },
+      { title: 'MCP Server', href: '/mcp' },
+      { title: 'AI Workflows', href: '/ai-workflows' },
     ],
   },
 ]
 
 export function Navigation(props: React.ComponentPropsWithoutRef<'nav'>) {
+  const navGroups = useNavigation()
+  const { locale, t } = useLocale()
+
   return (
     <nav {...props}>
       <ul role="list">
-        <TopLevelNavItem href="/">API</TopLevelNavItem>
-        <TopLevelNavItem href="#">Documentation</TopLevelNavItem>
-        <TopLevelNavItem href="#">Support</TopLevelNavItem>
-        {navigation.map((group, groupIndex) => (
+        <TopLevelNavItem href={`/${locale}`}>
+          {t('nav.topLevel.docs')}
+        </TopLevelNavItem>
+        <TopLevelNavItem href="https://github.com/SirrVault/sirr">
+          {t('nav.topLevel.github')}
+        </TopLevelNavItem>
+        {navGroups.map((group, groupIndex) => (
           <NavigationGroup
             key={group.title}
             group={group}
             className={groupIndex === 0 ? 'md:mt-0' : ''}
           />
         ))}
-        <li className="sticky bottom-0 z-10 mt-6 min-[416px]:hidden">
-          <Button href="#" variant="filled" className="w-full">
-            Sign in
-          </Button>
-        </li>
       </ul>
     </nav>
   )

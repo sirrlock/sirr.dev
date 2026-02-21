@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "siteTitle": "Sirr",
+    "siteTitleTemplate": "%s - Documentação Sirr",
+    "siteDescription": "Documentação do Sirr — o cofre de segredos efêmeros criado para a era da IA.",
+    "pages": {
+      "/": {
+        "title": "Documentação do Sirr",
+        "description": "Documentação do Sirr — o cofre de segredos efêmeros criado para a era da IA. Envie segredos com TTL e limites de leitura."
+      },
+      "/quickstart": {
+        "title": "Início rápido",
+        "description": "Comece com o Sirr em minutos. Instale, configure e envie seu primeiro segredo efêmero."
+      },
+      "/architecture": {
+        "title": "Arquitetura",
+        "description": "Como o Sirr criptografa, armazena e expira segredos usando ChaCha20Poly1305, Argon2id e redb."
+      },
+      "/configuration": {
+        "title": "Configuração",
+        "description": "Todas as variáveis de ambiente e opções de configuração do servidor Sirr e dos clientes CLI."
+      },
+      "/authentication": {
+        "title": "Autenticação",
+        "description": "Como autenticar-se na API do Sirr usando tokens Bearer."
+      },
+      "/errors": {
+        "title": "Erros",
+        "description": "Códigos de status HTTP, formato de resposta de erros e solução de problemas da API do Sirr."
+      },
+      "/sdks": {
+        "title": "SDKs",
+        "description": "Bibliotecas cliente oficiais do Sirr para Node.js, Python e .NET."
+      },
+      "/api-reference": {
+        "title": "Referência da API",
+        "description": "Referência completa da API HTTP para todos os 6 endpoints do servidor Sirr."
+      },
+      "/deployment": {
+        "title": "Implantação",
+        "description": "Implante o Sirr com Docker, Homebrew, download de binário ou compilação a partir do código-fonte."
+      },
+      "/self-hosting": {
+        "title": "Auto-hospedagem",
+        "description": "Guia de implantação em produção com proxy reverso, TLS, backups e monitoramento."
+      },
+      "/security": {
+        "title": "Segurança",
+        "description": "Modelo de ameaças do Sirr, detalhes de criptografia e princípios de design de confiança zero."
+      },
+      "/licensing": {
+        "title": "Licenciamento",
+        "description": "Detalhes da licença BSL 1.1, limites do nível gratuito e licenciamento comercial do Sirr."
+      },
+      "/cli": {
+        "title": "Referência do CLI",
+        "description": "Referência completa dos 9 comandos do CLI do Sirr com exemplos."
+      },
+      "/mcp": {
+        "title": "Servidor MCP",
+        "description": "Configure o servidor MCP do Sirr para integração com o Claude Code AI."
+      },
+      "/ai-workflows": {
+        "title": "Fluxos de trabalho com IA",
+        "description": "Padrões para usar o Sirr com agentes de IA, pipelines de CI/CD e fluxos de trabalho em equipe."
+      }
+    }
+  },
+  "nav": {
+    "groups": {
+      "guides": "Guias",
+      "server": "Servidor",
+      "tools": "Ferramentas"
+    },
+    "links": {
+      "introduction": "Introdução",
+      "quickstart": "Início rápido",
+      "architecture": "Arquitetura",
+      "configuration": "Configuração",
+      "authentication": "Autenticação",
+      "errors": "Erros",
+      "sdks": "SDKs",
+      "apiReference": "Referência da API",
+      "deployment": "Implantação",
+      "selfHosting": "Auto-hospedagem",
+      "security": "Segurança",
+      "licensing": "Licenciamento",
+      "cli": "Referência do CLI",
+      "mcp": "Servidor MCP",
+      "aiWorkflows": "Fluxos de trabalho com IA"
+    },
+    "topLevel": {
+      "docs": "Documentação",
+      "github": "GitHub"
+    }
+  },
+  "common": {
+    "readMore": "Leia mais",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "copyright": "Copyright {year}. Todos os direitos reservados.",
+    "getStarted": "Começar",
+    "exploreSDKs": "Explorar SDKs",
+    "officialLibraries": "Bibliotecas oficiais",
+    "followOnX": "Siga-nos no X",
+    "followOnGithub": "Siga-nos no GitHub",
+    "joinDiscord": "Junte-se ao nosso servidor Discord"
+  },
+  "home": {
+    "heroTitle": "Documentação do Sirr",
+    "heroLead": "O gerenciador de segredos criado para a era da IA. Todo segredo expira. Por design. Envie segredos com TTL e limites de leitura — uma vez que as condições são atendidas, o segredo desaparece.",
+    "gettingStarted": "Primeiros passos",
+    "gettingStartedLead": "Instale o Sirr como um único binário ou contêiner Docker, configure sua chave mestra e comece a enviar segredos efêmeros em minutos."
+  },
+  "guides": [
+    {
+      "href": "/quickstart",
+      "name": "Início rápido",
+      "description": "Instale o Sirr e envie seu primeiro segredo em menos de dois minutos."
+    },
+    {
+      "href": "/architecture",
+      "name": "Arquitetura",
+      "description": "Entenda como o Sirr criptografa, armazena e expira segredos."
+    },
+    {
+      "href": "/security",
+      "name": "Segurança",
+      "description": "Modelo de ameaças, detalhes de criptografia e design de confiança zero."
+    },
+    {
+      "href": "/ai-workflows",
+      "name": "Fluxos de trabalho com IA",
+      "description": "Padrões para usar o Sirr com Claude, LangChain e CI/CD."
+    }
+  ],
+  "resources": [
+    {
+      "href": "/api-reference",
+      "name": "Referência da API",
+      "description": "Referência completa da API HTTP para criar, recuperar e gerenciar segredos efêmeros."
+    },
+    {
+      "href": "/cli",
+      "name": "Referência do CLI",
+      "description": "Todos os 9 comandos do CLI para enviar, recuperar e gerenciar segredos pelo terminal."
+    },
+    {
+      "href": "/mcp",
+      "name": "Servidor MCP",
+      "description": "Conecte o Sirr ao Claude Code para gerenciamento de segredos nativo de IA."
+    },
+    {
+      "href": "/sdks",
+      "name": "SDKs",
+      "description": "Bibliotecas cliente oficiais para Node.js, Python e .NET."
+    }
+  ],
+  "libraries": [
+    {
+      "name": "Node.js",
+      "description": "@sirr/node — Cliente TypeScript sem dependências. Fetch nativo.",
+      "href": "https://github.com/SirrVault/node"
+    },
+    {
+      "name": "Python",
+      "description": "sirr — Cliente síncrono e assíncrono baseado em httpx.",
+      "href": "https://github.com/SirrVault/python"
+    },
+    {
+      "name": ".NET",
+      "description": "Sirr.Client — Cliente async-first baseado em HttpClient.",
+      "href": "https://github.com/SirrVault/dotnet"
+    },
+    {
+      "name": "Rust CLI",
+      "description": "O binário sirr também funciona como um cliente CLI completo.",
+      "href": "https://github.com/SirrVault/sirr"
+    }
+  ]
+}

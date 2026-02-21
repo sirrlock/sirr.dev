@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "siteTitle": "Sirr",
+    "siteTitleTemplate": "%s - وثائق Sirr",
+    "siteDescription": "وثائق Sirr — خزنة الأسرار المؤقتة المصممة لعصر الذكاء الاصطناعي.",
+    "pages": {
+      "/": {
+        "title": "وثائق Sirr",
+        "description": "وثائق Sirr — خزنة الأسرار المؤقتة المصممة لعصر الذكاء الاصطناعي. أرسل الأسرار مع TTL وحدود القراءة."
+      },
+      "/quickstart": {
+        "title": "البدء السريع",
+        "description": "ابدأ باستخدام Sirr في دقائق. قم بالتثبيت والتكوين وأرسل أول سر مؤقت لك."
+      },
+      "/architecture": {
+        "title": "البنية",
+        "description": "كيف يقوم Sirr بتشفير الأسرار وتخزينها وإنهاء صلاحيتها باستخدام ChaCha20Poly1305 وArgon2id وredb."
+      },
+      "/configuration": {
+        "title": "التكوين",
+        "description": "جميع متغيرات البيئة وخيارات التكوين لخادم Sirr وعملاء CLI."
+      },
+      "/authentication": {
+        "title": "المصادقة",
+        "description": "كيفية المصادقة مع API الخاص بـ Sirr باستخدام رموز Bearer."
+      },
+      "/errors": {
+        "title": "الأخطاء",
+        "description": "رموز حالة HTTP وتنسيق استجابة الأخطاء واستكشاف الأخطاء وإصلاحها لـ API الخاص بـ Sirr."
+      },
+      "/sdks": {
+        "title": "SDKs",
+        "description": "مكتبات عميل Sirr الرسمية لـ Node.js وPython و.NET."
+      },
+      "/api-reference": {
+        "title": "مرجع API",
+        "description": "مرجع HTTP API الكامل لجميع نقاط نهاية خادم Sirr الستة."
+      },
+      "/deployment": {
+        "title": "النشر",
+        "description": "انشر Sirr باستخدام Docker أو Homebrew أو تنزيل الملف الثنائي أو البناء من المصدر."
+      },
+      "/self-hosting": {
+        "title": "الاستضافة الذاتية",
+        "description": "دليل نشر الإنتاج مع الوكيل العكسي وTLS والنسخ الاحتياطي والمراقبة."
+      },
+      "/security": {
+        "title": "الأمان",
+        "description": "نموذج التهديد الخاص بـ Sirr وتفاصيل التشفير ومبادئ التصميم القائم على انعدام الثقة."
+      },
+      "/licensing": {
+        "title": "الترخيص",
+        "description": "تفاصيل ترخيص BSL 1.1 وحدود الطبقة المجانية والترخيص التجاري لـ Sirr."
+      },
+      "/cli": {
+        "title": "مرجع CLI",
+        "description": "مرجع كامل لجميع أوامر CLI التسعة الخاصة بـ Sirr مع أمثلة."
+      },
+      "/mcp": {
+        "title": "خادم MCP",
+        "description": "قم بإعداد خادم MCP الخاص بـ Sirr للتكامل مع Claude Code AI."
+      },
+      "/ai-workflows": {
+        "title": "سير عمل الذكاء الاصطناعي",
+        "description": "أنماط لاستخدام Sirr مع وكلاء الذكاء الاصطناعي وخطوط أنابيب CI/CD وسير عمل الفريق."
+      }
+    }
+  },
+  "nav": {
+    "groups": {
+      "guides": "الأدلة",
+      "server": "الخادم",
+      "tools": "الأدوات"
+    },
+    "links": {
+      "introduction": "المقدمة",
+      "quickstart": "البدء السريع",
+      "architecture": "البنية",
+      "configuration": "التكوين",
+      "authentication": "المصادقة",
+      "errors": "الأخطاء",
+      "sdks": "SDKs",
+      "apiReference": "مرجع API",
+      "deployment": "النشر",
+      "selfHosting": "الاستضافة الذاتية",
+      "security": "الأمان",
+      "licensing": "الترخيص",
+      "cli": "مرجع CLI",
+      "mcp": "خادم MCP",
+      "aiWorkflows": "سير عمل الذكاء الاصطناعي"
+    },
+    "topLevel": {
+      "docs": "الوثائق",
+      "github": "GitHub"
+    }
+  },
+  "common": {
+    "readMore": "اقرأ المزيد",
+    "previous": "السابق",
+    "next": "التالي",
+    "copyright": "حقوق النشر {year}. جميع الحقوق محفوظة.",
+    "getStarted": "ابدأ الآن",
+    "exploreSDKs": "استكشف SDKs",
+    "officialLibraries": "المكتبات الرسمية",
+    "followOnX": "تابعنا على X",
+    "followOnGithub": "تابعنا على GitHub",
+    "joinDiscord": "انضم إلى خادم Discord الخاص بنا"
+  },
+  "home": {
+    "heroTitle": "وثائق Sirr",
+    "heroLead": "مدير الأسرار المصمم لعصر الذكاء الاصطناعي. كل سر ينتهي. بالتصميم. أرسل الأسرار مع TTL وحدود القراءة — بمجرد استيفاء الشروط، يختفي السر.",
+    "gettingStarted": "البدء",
+    "gettingStartedLead": "ثبّت Sirr كملف ثنائي واحد أو حاوية Docker، وقم بتكوين مفتاحك الرئيسي، وابدأ بإرسال الأسرار المؤقتة في دقائق."
+  },
+  "guides": [
+    {
+      "href": "/quickstart",
+      "name": "البدء السريع",
+      "description": "ثبّت Sirr وأرسل أول سر لك في أقل من دقيقتين."
+    },
+    {
+      "href": "/architecture",
+      "name": "البنية",
+      "description": "افهم كيف يقوم Sirr بتشفير الأسرار وتخزينها وإنهاء صلاحيتها."
+    },
+    {
+      "href": "/security",
+      "name": "الأمان",
+      "description": "نموذج التهديد وتفاصيل التشفير والتصميم القائم على انعدام الثقة."
+    },
+    {
+      "href": "/ai-workflows",
+      "name": "سير عمل الذكاء الاصطناعي",
+      "description": "أنماط لاستخدام Sirr مع Claude وLangChain وCI/CD."
+    }
+  ],
+  "resources": [
+    {
+      "href": "/api-reference",
+      "name": "مرجع API",
+      "description": "مرجع HTTP API الكامل لإنشاء واسترجاع وإدارة الأسرار المؤقتة."
+    },
+    {
+      "href": "/cli",
+      "name": "مرجع CLI",
+      "description": "جميع أوامر CLI التسعة لإرسال واسترجاع وإدارة الأسرار من الطرفية."
+    },
+    {
+      "href": "/mcp",
+      "name": "خادم MCP",
+      "description": "قم بتوصيل Sirr بـ Claude Code لإدارة الأسرار بأسلوب الذكاء الاصطناعي الأصلي."
+    },
+    {
+      "href": "/sdks",
+      "name": "SDKs",
+      "description": "مكتبات العميل الرسمية لـ Node.js وPython و.NET."
+    }
+  ],
+  "libraries": [
+    {
+      "name": "Node.js",
+      "description": "@sirr/node — عميل TypeScript بدون أي تبعيات. Fetch أصلي.",
+      "href": "https://github.com/SirrVault/node"
+    },
+    {
+      "name": "Python",
+      "description": "sirr — عميل متزامن وغير متزامن مبني على httpx.",
+      "href": "https://github.com/SirrVault/python"
+    },
+    {
+      "name": ".NET",
+      "description": "Sirr.Client — عميل غير متزامن أولاً مبني على HttpClient.",
+      "href": "https://github.com/SirrVault/dotnet"
+    },
+    {
+      "name": "Rust CLI",
+      "description": "ملف sirr الثنائي يعمل أيضاً كعميل CLI كامل الميزات.",
+      "href": "https://github.com/SirrVault/sirr"
+    }
+  ]
+}

@@ -9,6 +9,11 @@ import { Header } from '@/components/Header'
 import { Logo } from '@/components/Logo'
 import { Navigation } from '@/components/Navigation'
 import { SectionProvider, type Section } from '@/components/SectionProvider'
+import { useLocale } from '@/i18n/client'
+
+function stripLocalePrefix(pathname: string): string {
+  return pathname.replace(/^\/[a-z]{2}(\/|$)/, '/$1').replace(/\/\/$/, '/')
+}
 
 export function Layout({
   children,
@@ -18,9 +23,11 @@ export function Layout({
   allSections: Record<string, Array<Section>>
 }) {
   let pathname = usePathname()
+  let strippedPath = stripLocalePrefix(pathname)
+  const { locale } = useLocale()
 
   return (
-    <SectionProvider sections={allSections[pathname] ?? []}>
+    <SectionProvider sections={allSections[strippedPath] ?? []}>
       <div className="h-full lg:ml-72 xl:ml-80">
         <motion.header
           layoutScroll
@@ -28,7 +35,7 @@ export function Layout({
         >
           <div className="contents lg:pointer-events-auto lg:block lg:w-72 lg:overflow-y-auto lg:border-r lg:border-zinc-900/10 lg:px-6 lg:pt-4 lg:pb-8 xl:w-80 lg:dark:border-white/10">
             <div className="hidden lg:flex">
-              <Link href="/" aria-label="Home">
+              <Link href={`/${locale}`} aria-label="Home">
                 <Logo className="h-6" />
               </Link>
             </div>

@@ -1,0 +1,414 @@
+export const metadata = {
+  title: 'API Reference',
+  description:
+    'Complete HTTP API reference for Sirr. Six endpoints for creating, reading, listing, deleting, and pruning ephemeral secrets.',
+}
+
+export const sections = [
+  { title: 'Create a secret', id: 'post-secrets' },
+  { title: 'List secrets', id: 'get-secrets' },
+  { title: 'Retrieve a secret', id: 'get-secrets-key' },
+  { title: 'Delete a secret', id: 'delete-secrets-key' },
+  { title: 'Prune expired secrets', id: 'post-prune' },
+  { title: 'Health check', id: 'get-health' },
+]
+
+# API Reference
+
+Sirr exposes six HTTP endpoints. All endpoints except `/health` require a Bearer token set to your `SIRR_MASTER_KEY`. Requests and responses use JSON. {{ className: 'lead' }}
+
+<Note>
+  All authenticated endpoints require the `Authorization: Bearer <SIRR_MASTER_KEY>` header. The master key is set when you start the server and is used both for authentication and as the seed for encryption.
+</Note>
+
+---
+
+## Create a secret {{ tag: 'POST', label: '/secrets', id: 'post-secrets' }}
+
+<Row>
+  <Col>
+
+    Create an encrypted secret. The value is encrypted at rest using ChaCha20Poly1305 with a per-record nonce derived from your master key via Argon2id.
+
+    ### Required attributes
+
+    <Properties>
+      <Property name="key" type="string">
+        Unique identifier for the secret. Used to retrieve or delete it later.
+      </Property>
+      <Property name="value" type="string">
+        The secret value to encrypt and store.
+      </Property>
+    </Properties>
+
+    ### Optional attributes
+
+    <Properties>
+      <Property name="ttl_seconds" type="integer">
+        Time-to-live in seconds. The secret is automatically destroyed after this duration. Omit for no expiration.
+      </Property>
+      <Property name="max_reads" type="integer">
+        Maximum number of times the secret can be read. The secret is permanently destroyed after this many reads. Omit for unlimited reads.
+      </Property>
+    </Properties>
+
+    <Note>
+      Without a valid license key, Sirr allows a maximum of 100 active secrets per instance. Attempting to exceed this limit returns a `402 Payment Required` error.
+    </Note>
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="POST" label="/secrets">
+
+    ```bash {{ title: 'cURL' }}
+    curl -X POST http://localhost:8080/secrets \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "key": "DB_URL",
+        "value": "postgres://user:pass@db:5432/myapp",
+        "ttl_seconds": 3600,
+        "max_reads": 1
+      }'
+    ```
+
+    ```js {{ title: 'Node.js' }}
+    const response = await fetch('http://localhost:8080/secrets', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SIRR_MASTER_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        key: 'DB_URL',
+        value: 'postgres://user:pass@db:5432/myapp',
+        ttl_seconds: 3600,
+        max_reads: 1,
+      }),
+    })
+
+    const data = await response.json()
+    ```
+
+    ```python {{ title: 'Python' }}
+    import requests
+
+    response = requests.post(
+        "http://localhost:8080/secrets",
+        headers={"Authorization": f"Bearer {SIRR_MASTER_KEY}"},
+        json={
+            "key": "DB_URL",
+            "value": "postgres://user:pass@db:5432/myapp",
+            "ttl_seconds": 3600,
+            "max_reads": 1,
+        },
+    )
+
+    data = response.json()
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response (201)' }}
+    {
+      "key": "DB_URL"
+    }
+    ```
+
+    ```json {{ title: 'Error (402)' }}
+    {
+      "error": "secret limit reached",
+      "message": "Free tier allows up to 100 active secrets. Set SIRR_LICENSE_KEY to unlock unlimited usage."
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## List secrets {{ tag: 'GET', label: '/secrets', id: 'get-secrets' }}
+
+<Row>
+  <Col>
+
+    List metadata for all active secrets. This endpoint never returns secret values — only keys, timestamps, and read counters. This is a deliberate security design choice.
+
+    <Note>
+      Secret values are never included in list responses. Use `GET /secrets/:key` to retrieve and decrypt a specific secret.
+    </Note>
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="GET" label="/secrets">
+
+    ```bash {{ title: 'cURL' }}
+    curl http://localhost:8080/secrets \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY"
+    ```
+
+    ```js {{ title: 'Node.js' }}
+    const response = await fetch('http://localhost:8080/secrets', {
+      headers: {
+        'Authorization': `Bearer ${process.env.SIRR_MASTER_KEY}`,
+      },
+    })
+
+    const data = await response.json()
+    ```
+
+    ```python {{ title: 'Python' }}
+    import requests
+
+    response = requests.get(
+        "http://localhost:8080/secrets",
+        headers={"Authorization": f"Bearer {SIRR_MASTER_KEY}"},
+    )
+
+    data = response.json()
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response' }}
+    {
+      "secrets": [
+        {
+          "key": "DB_URL",
+          "created_at": 1700000000,
+          "expires_at": 1700003600,
+          "max_reads": 1,
+          "read_count": 0
+        }
+      ]
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Retrieve a secret {{ tag: 'GET', label: '/secrets/:key', id: 'get-secrets-key' }}
+
+<Row>
+  <Col>
+
+    Retrieve and decrypt a secret by its key. Each call increments the read counter. If the secret has reached its `max_reads` limit, it is permanently destroyed after this response. Returns `404` if the secret has expired, been burned, or does not exist.
+
+    ### Path parameters
+
+    <Properties>
+      <Property name="key" type="string">
+        The key of the secret to retrieve.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="GET" label="/secrets/:key">
+
+    ```bash {{ title: 'cURL' }}
+    curl http://localhost:8080/secrets/DB_URL \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY"
+    ```
+
+    ```js {{ title: 'Node.js' }}
+    const response = await fetch('http://localhost:8080/secrets/DB_URL', {
+      headers: {
+        'Authorization': `Bearer ${process.env.SIRR_MASTER_KEY}`,
+      },
+    })
+
+    const data = await response.json()
+    ```
+
+    ```python {{ title: 'Python' }}
+    import requests
+
+    response = requests.get(
+        "http://localhost:8080/secrets/DB_URL",
+        headers={"Authorization": f"Bearer {SIRR_MASTER_KEY}"},
+    )
+
+    data = response.json()
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response' }}
+    {
+      "key": "DB_URL",
+      "value": "postgres://user:pass@db:5432/myapp",
+      "created_at": 1700000000,
+      "expires_at": 1700003600,
+      "max_reads": 1,
+      "read_count": 1
+    }
+    ```
+
+    ```json {{ title: 'Error (404)' }}
+    {
+      "error": "not found",
+      "message": "Secret does not exist, has expired, or has been burned."
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Delete a secret {{ tag: 'DELETE', label: '/secrets/:key', id: 'delete-secrets-key' }}
+
+<Row>
+  <Col>
+
+    Permanently delete a secret immediately, regardless of its TTL or remaining reads.
+
+    ### Path parameters
+
+    <Properties>
+      <Property name="key" type="string">
+        The key of the secret to delete.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="DELETE" label="/secrets/:key">
+
+    ```bash {{ title: 'cURL' }}
+    curl -X DELETE http://localhost:8080/secrets/DB_URL \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY"
+    ```
+
+    ```js {{ title: 'Node.js' }}
+    const response = await fetch('http://localhost:8080/secrets/DB_URL', {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${process.env.SIRR_MASTER_KEY}`,
+      },
+    })
+
+    const data = await response.json()
+    ```
+
+    ```python {{ title: 'Python' }}
+    import requests
+
+    response = requests.delete(
+        "http://localhost:8080/secrets/DB_URL",
+        headers={"Authorization": f"Bearer {SIRR_MASTER_KEY}"},
+    )
+
+    data = response.json()
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response' }}
+    {
+      "deleted": true
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Prune expired secrets {{ tag: 'POST', label: '/prune', id: 'post-prune' }}
+
+<Row>
+  <Col>
+
+    Delete all expired secrets from the database. This is a housekeeping endpoint that reclaims storage by removing secrets whose TTL has elapsed. Returns the count of pruned secrets.
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="POST" label="/prune">
+
+    ```bash {{ title: 'cURL' }}
+    curl -X POST http://localhost:8080/prune \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY"
+    ```
+
+    ```js {{ title: 'Node.js' }}
+    const response = await fetch('http://localhost:8080/prune', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SIRR_MASTER_KEY}`,
+      },
+    })
+
+    const data = await response.json()
+    ```
+
+    ```python {{ title: 'Python' }}
+    import requests
+
+    response = requests.post(
+        "http://localhost:8080/prune",
+        headers={"Authorization": f"Bearer {SIRR_MASTER_KEY}"},
+    )
+
+    data = response.json()
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response' }}
+    {
+      "pruned": 3
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Health check {{ tag: 'GET', label: '/health', id: 'get-health' }}
+
+<Row>
+  <Col>
+
+    Check whether the Sirr server is running and ready to accept requests. This endpoint does not require authentication and is suitable for load balancer health checks and uptime monitoring.
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="GET" label="/health">
+
+    ```bash {{ title: 'cURL' }}
+    curl http://localhost:8080/health
+    ```
+
+    ```js {{ title: 'Node.js' }}
+    const response = await fetch('http://localhost:8080/health')
+    const data = await response.json()
+    ```
+
+    ```python {{ title: 'Python' }}
+    import requests
+
+    response = requests.get("http://localhost:8080/health")
+    data = response.json()
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response' }}
+    {
+      "status": "ok"
+    }
+    ```
+
+  </Col>
+</Row>

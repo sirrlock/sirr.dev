@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "siteTitle": "Sirr",
+    "siteTitleTemplate": "%s - Sirr ドキュメント",
+    "siteDescription": "Sirr ドキュメント — AI時代のために構築された一時的シークレット保管庫。",
+    "pages": {
+      "/": {
+        "title": "Sirr ドキュメント",
+        "description": "Sirr ドキュメント — AI時代のために構築された一時的シークレット保管庫。TTLと読み取り制限付きでシークレットを送信。"
+      },
+      "/quickstart": {
+        "title": "クイックスタート",
+        "description": "数分でSirrを始めましょう。インストール、設定、そして初めての一時的シークレットを送信。"
+      },
+      "/architecture": {
+        "title": "アーキテクチャ",
+        "description": "SirrがChaCha20Poly1305、Argon2id、redbを使用してシークレットを暗号化、保存、有効期限管理する仕組み。"
+      },
+      "/configuration": {
+        "title": "設定",
+        "description": "SirrサーバーとCLIクライアントのすべての環境変数と設定オプション。"
+      },
+      "/authentication": {
+        "title": "認証",
+        "description": "Bearerトークンを使用したSirr APIへの認証方法。"
+      },
+      "/errors": {
+        "title": "エラー",
+        "description": "Sirr APIのHTTPステータスコード、エラーレスポンス形式、トラブルシューティング。"
+      },
+      "/sdks": {
+        "title": "SDKs",
+        "description": "Node.js、Python、.NET向けの公式Sirrクライアントライブラリ。"
+      },
+      "/api-reference": {
+        "title": "APIリファレンス",
+        "description": "Sirrサーバーの全6エンドポイントの完全なHTTP APIリファレンス。"
+      },
+      "/deployment": {
+        "title": "デプロイ",
+        "description": "Docker、Homebrew、バイナリダウンロード、またはソースからのビルドでSirrをデプロイ。"
+      },
+      "/self-hosting": {
+        "title": "セルフホスティング",
+        "description": "リバースプロキシ、TLS、バックアップ、監視を含む本番デプロイガイド。"
+      },
+      "/security": {
+        "title": "セキュリティ",
+        "description": "Sirrの脅威モデル、暗号化の詳細、ゼロトラスト設計原則。"
+      },
+      "/licensing": {
+        "title": "ライセンス",
+        "description": "BSL 1.1ライセンスの詳細、無料枠の制限、Sirrの商用ライセンス。"
+      },
+      "/cli": {
+        "title": "CLIリファレンス",
+        "description": "Sirrの全9 CLIコマンドの完全なリファレンスと例。"
+      },
+      "/mcp": {
+        "title": "MCPサーバー",
+        "description": "Claude Code AI統合のためのSirr MCPサーバーのセットアップ。"
+      },
+      "/ai-workflows": {
+        "title": "AIワークフロー",
+        "description": "AIエージェント、CI/CDパイプライン、チームワークフローでSirrを使用するパターン。"
+      }
+    }
+  },
+  "nav": {
+    "groups": {
+      "guides": "ガイド",
+      "server": "サーバー",
+      "tools": "ツール"
+    },
+    "links": {
+      "introduction": "はじめに",
+      "quickstart": "クイックスタート",
+      "architecture": "アーキテクチャ",
+      "configuration": "設定",
+      "authentication": "認証",
+      "errors": "エラー",
+      "sdks": "SDKs",
+      "apiReference": "APIリファレンス",
+      "deployment": "デプロイ",
+      "selfHosting": "セルフホスティング",
+      "security": "セキュリティ",
+      "licensing": "ライセンス",
+      "cli": "CLIリファレンス",
+      "mcp": "MCPサーバー",
+      "aiWorkflows": "AIワークフロー"
+    },
+    "topLevel": {
+      "docs": "ドキュメント",
+      "github": "GitHub"
+    }
+  },
+  "common": {
+    "readMore": "続きを読む",
+    "previous": "前へ",
+    "next": "次へ",
+    "copyright": "Copyright {year}. All rights reserved.",
+    "getStarted": "始める",
+    "exploreSDKs": "SDKsを探索",
+    "officialLibraries": "公式ライブラリ",
+    "followOnX": "Xでフォロー",
+    "followOnGithub": "GitHubでフォロー",
+    "joinDiscord": "Discordサーバーに参加"
+  },
+  "home": {
+    "heroTitle": "Sirr ドキュメント",
+    "heroLead": "AI時代のために構築されたシークレットマネージャー。すべてのシークレットには有効期限があります。それが設計です。TTLと読み取り制限付きでシークレットを送信 — 条件が満たされると、シークレットは消滅します。",
+    "gettingStarted": "はじめに",
+    "gettingStartedLead": "Sirrを単一バイナリまたはDockerコンテナとしてインストールし、マスターキーを設定して、数分で一時的シークレットの送信を開始しましょう。"
+  },
+  "guides": [
+    {
+      "href": "/quickstart",
+      "name": "クイックスタート",
+      "description": "Sirrをインストールし、2分以内に最初のシークレットを送信。"
+    },
+    {
+      "href": "/architecture",
+      "name": "アーキテクチャ",
+      "description": "Sirrがシークレットを暗号化、保存、有効期限管理する仕組みを理解。"
+    },
+    {
+      "href": "/security",
+      "name": "セキュリティ",
+      "description": "脅威モデル、暗号化の詳細、ゼロトラスト設計。"
+    },
+    {
+      "href": "/ai-workflows",
+      "name": "AIワークフロー",
+      "description": "Claude、LangChain、CI/CDでSirrを使用するパターン。"
+    }
+  ],
+  "resources": [
+    {
+      "href": "/api-reference",
+      "name": "APIリファレンス",
+      "description": "一時的シークレットの作成、取得、管理のための完全なHTTP APIリファレンス。"
+    },
+    {
+      "href": "/cli",
+      "name": "CLIリファレンス",
+      "description": "ターミナルからシークレットを送信、取得、管理するための全9 CLIコマンド。"
+    },
+    {
+      "href": "/mcp",
+      "name": "MCPサーバー",
+      "description": "SirrをClaude Codeに接続してAIネイティブなシークレット管理を実現。"
+    },
+    {
+      "href": "/sdks",
+      "name": "SDKs",
+      "description": "Node.js、Python、.NET向けの公式クライアントライブラリ。"
+    }
+  ],
+  "libraries": [
+    {
+      "name": "Node.js",
+      "description": "@sirr/node — 依存関係ゼロのTypeScriptクライアント。ネイティブfetch。",
+      "href": "https://github.com/SirrVault/node"
+    },
+    {
+      "name": "Python",
+      "description": "sirr — httpxベースの同期・非同期クライアント。",
+      "href": "https://github.com/SirrVault/python"
+    },
+    {
+      "name": ".NET",
+      "description": "Sirr.Client — HttpClientベースの非同期優先クライアント。",
+      "href": "https://github.com/SirrVault/dotnet"
+    },
+    {
+      "name": "Rust CLI",
+      "description": "sirrバイナリはフル機能のCLIクライアントとしても機能します。",
+      "href": "https://github.com/SirrVault/sirr"
+    }
+  ]
+}

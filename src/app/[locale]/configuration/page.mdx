@@ -1,0 +1,130 @@
+export const metadata = {
+  title: 'Configuration',
+  description:
+    'All environment variables, data directory paths, and Docker configuration options for the Sirr server and client SDKs.',
+}
+
+export const sections = [
+  { title: 'Server environment variables', id: 'server-environment-variables' },
+  { title: 'Client environment variables', id: 'client-environment-variables' },
+  { title: 'Data directories', id: 'data-directories' },
+  { title: 'Docker configuration', id: 'docker-configuration' },
+]
+
+# Configuration
+
+Sirr is configured entirely through environment variables. No config files, no CLI flags for server settings. Set the variables, start the binary. {{ className: 'lead' }}
+
+## Server environment variables
+
+These variables control the Sirr server process.
+
+<Properties>
+  <Property name="SIRR_MASTER_KEY" type="string" required>
+    The master key used for two purposes: as the bearer token for API authentication (constant-time comparison) and as the input to Argon2id key derivation for encrypting secrets. Must be set before the server starts. Use `openssl rand -hex 32` to generate a strong key.
+  </Property>
+  <Property name="SIRR_LICENSE_KEY" type="string">
+    License key for running more than 100 secrets per instance. Format: `sirr_lic_<40-hex-chars>`. Validated against `secretdrop.app` on startup. Without a valid license, the server returns `402 Payment Required` when the 101st secret is pushed. Free for up to 100 secrets.
+  </Property>
+  <Property name="SIRR_PORT" type="integer" default="8080">
+    TCP port the server listens on.
+  </Property>
+  <Property name="SIRR_HOST" type="string" default="0.0.0.0">
+    Network interface to bind to. Use `127.0.0.1` to restrict to localhost only.
+  </Property>
+  <Property name="SIRR_DATA_DIR" type="string">
+    Directory for the `sirr.db` database and `sirr.salt` file. Defaults to the platform-specific data directory (see [Data directories](#data-directories) below).
+  </Property>
+  <Property name="SIRR_LOG_LEVEL" type="string" default="info">
+    Log verbosity. One of: `trace`, `debug`, `info`, `warn`, `error`.
+  </Property>
+</Properties>
+
+<Note>
+  `SIRR_MASTER_KEY` is the only required variable. All others have sensible defaults. Never commit your master key to version control.
+</Note>
+
+## Client environment variables
+
+The Sirr CLI and official SDKs read these variables to connect to a Sirr server.
+
+<Properties>
+  <Property name="SIRR_SERVER" type="string" default="http://localhost:8080">
+    The base URL of the Sirr server to connect to. Include the protocol (`http://` or `https://`).
+  </Property>
+  <Property name="SIRR_TOKEN" type="string">
+    The bearer token for authenticating API requests. This is the same value as `SIRR_MASTER_KEY` on the server.
+  </Property>
+</Properties>
+
+You can set these in your shell profile or pass them inline:
+
+```bash {{ title: 'Client configuration' }}
+export SIRR_SERVER="https://sirr.internal.example.com"
+export SIRR_TOKEN="your-master-key"
+
+# Now all CLI commands authenticate automatically
+sirr push API_KEY="sk-..." --ttl 1h
+sirr get API_KEY
+```
+
+## Data directories
+
+Sirr stores two files in its data directory: `sirr.db` (the encrypted database) and `sirr.salt` (the 32-byte salt for key derivation). The default location depends on your platform:
+
+| Platform | Default path |
+| --- | --- |
+| Linux | `~/.local/share/sirr/` |
+| macOS | `~/Library/Application Support/sirr/` |
+| Windows | `%APPDATA%\sirr\` |
+
+Override the default by setting `SIRR_DATA_DIR`:
+
+```bash {{ title: 'Custom data directory' }}
+export SIRR_DATA_DIR=/opt/sirr/data
+sirr serve
+```
+
+<Note>
+  Both `sirr.db` and `sirr.salt` must be preserved together. Losing `sirr.salt` makes existing secrets permanently unrecoverable, even with the correct master key. Back up both files.
+</Note>
+
+## Docker configuration
+
+When running Sirr in Docker, mount a volume for the data directory to persist secrets across container restarts. Set `SIRR_DATA_DIR=/data` to point at your mounted volume.
+
+```bash {{ title: 'Docker with persistent storage' }}
+docker run -d \
+  --name sirr \
+  -p 8080:8080 \
+  -v ./sirr-data:/data \
+  -e SIRR_MASTER_KEY="$(openssl rand -hex 32)" \
+  -e SIRR_DATA_DIR=/data \
+  ghcr.io/sirrvault/sirr
+```
+
+### Docker Compose
+
+```yaml {{ title: 'docker-compose.yml' }}
+services:
+  sirr:
+    image: ghcr.io/sirrvault/sirr
+    ports:
+      - "8080:8080"
+    volumes:
+      - sirr-data:/data
+    environment:
+      SIRR_MASTER_KEY: "${SIRR_MASTER_KEY}"
+      SIRR_DATA_DIR: /data
+      SIRR_LOG_LEVEL: info
+
+volumes:
+  sirr-data:
+```
+
+### Production recommendations
+
+- Always mount a persistent volume for `/data`. Without it, secrets are lost when the container restarts.
+- Set `SIRR_MASTER_KEY` via a Docker secret or your orchestrator's secret management, not in plain text in a compose file.
+- Use `SIRR_HOST=0.0.0.0` (the default) inside the container and restrict access at the network level with a reverse proxy.
+- Set `SIRR_LOG_LEVEL=warn` in production to reduce log noise.

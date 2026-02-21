@@ -1,12 +1,15 @@
 {
-  "name": "tailwind-plus-protocol",
+  "name": "sirr.dev",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write ."
   },
   "browserslist": "defaults, not ie <= 11",
   "dependencies": {
@@ -45,14 +48,22 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^24.1.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "^4.5.2",
     "eslint": "^9.32.0",
     "eslint-config-next": "16.1.6",
+    "jsdom": "^26.1.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "sharp": "0.34.3"
+    "sharp": "0.34.3",
+    "typescript-eslint": "^8.56.0",
+    "vitest": "^3.2.4"
   },
   "overrides": {
     "@types/react": "19.2.14",
