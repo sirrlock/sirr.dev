@@ -9,11 +9,7 @@ import withSearch from './src/mdx/search.mjs'
 const git = (...args) => { try { return execFileSync('git', args).toString().trim() } catch { return 'unknown' } }
 
 const buildSha = git('rev-parse', '--short', 'HEAD')
-const buildVersion = (() => {
-  const now = new Date()
-  const ts = now.toISOString().replace(/[-T:]/g, '').slice(0, 14)
-  return `1.0.${ts}`
-})()
+const buildVersion = `1.0.${git('rev-list', '--count', 'HEAD')}`
 
 const withMDX = nextMDX({
   options: {
