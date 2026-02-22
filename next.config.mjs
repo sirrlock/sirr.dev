@@ -6,11 +6,10 @@ import { rehypePlugins } from './src/mdx/rehype.mjs'
 import { remarkPlugins } from './src/mdx/remark.mjs'
 import withSearch from './src/mdx/search.mjs'
 
-const git = (...args) => { try { return execFileSync('git', args).toString().trim() } catch { return 'unknown' } }
+const git = (...args) => { try { return execFileSync('git', args).toString().trim() } catch { return null } }
 
-const buildSha = git('rev-parse', '--short', 'HEAD')
-const buildTime = new Date().toISOString().replace(/[-T:]/g, '').slice(0, 14)
-const buildVersion = `1.0.${buildTime}`
+const buildSha = process.env.BUILD_SHA || git('rev-parse', '--short', 'HEAD') || 'unknown'
+const buildNumber = process.env.BUILD_NUMBER || git('rev-list', '--count', 'HEAD') || 'unknown'
 
 const withMDX = nextMDX({
   options: {
@@ -29,7 +28,7 @@ const nextConfig = {
   },
   env: {
     BUILD_SHA: buildSha,
-    BUILD_VERSION: buildVersion,
+    BUILD_NUMBER: buildNumber,
   },
 }
 
