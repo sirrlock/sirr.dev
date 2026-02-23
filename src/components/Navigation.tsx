@@ -260,6 +260,10 @@ export function useNavigation(): Array<NavGroup> {
         { title: t('nav.links.deployment'), href: `${prefix}/deployment` },
         { title: t('nav.links.selfHosting'), href: `${prefix}/self-hosting` },
         { title: t('nav.links.security'), href: `${prefix}/security` },
+        {
+          title: t('nav.links.vaultEncryption'),
+          href: `${prefix}/vault-encryption`,
+        },
         { title: t('nav.links.licensing'), href: `${prefix}/licensing` },
       ],
     },
@@ -295,6 +299,7 @@ export const navigation: Array<NavGroup> = [
       { title: 'Deployment', href: '/deployment' },
       { title: 'Self-Hosting', href: '/self-hosting' },
       { title: 'Security', href: '/security' },
+      { title: 'Vault Encryption', href: '/vault-encryption' },
       { title: 'Licensing', href: '/licensing' },
     ],
   },

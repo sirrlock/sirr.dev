@@ -48,6 +48,10 @@
         "title": "安全",
         "description": "Sirr 的威胁模型、加密细节和零信任设计原则。"
       },
+      "/vault-encryption": {
+        "title": "保险库加密",
+        "description": "两层静态加密架构：AES-256-GCM 服务端加密、客户端加密、密钥交付、轮换和备份。"
+      },
       "/licensing": {
         "title": "许可证",
         "description": "BSL 1.1 许可证详情、免费层限制和 Sirr 商业许可。"
@@ -84,6 +88,7 @@
       "deployment": "部署",
       "selfHosting": "自托管",
       "security": "安全",
+      "vaultEncryption": "保险库加密",
       "licensing": "许可证",
       "cli": "CLI 参考",
       "mcp": "MCP 服务器",

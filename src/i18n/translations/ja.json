@@ -48,6 +48,10 @@
         "title": "セキュリティ",
         "description": "Sirrの脅威モデル、暗号化の詳細、ゼロトラスト設計原則。"
       },
+      "/vault-encryption": {
+        "title": "Vault暗号化",
+        "description": "二層の保存時暗号化アーキテクチャ：AES-256-GCMサーバー側暗号化、クライアント側暗号化、鍵配送、ローテーション、バックアップ。"
+      },
       "/licensing": {
         "title": "ライセンス",
         "description": "BSL 1.1ライセンスの詳細、無料枠の制限、Sirrの商用ライセンス。"
@@ -84,6 +88,7 @@
       "deployment": "デプロイ",
       "selfHosting": "セルフホスティング",
       "security": "セキュリティ",
+      "vaultEncryption": "Vault暗号化",
       "licensing": "ライセンス",
       "cli": "CLIリファレンス",
       "mcp": "MCPサーバー",

@@ -48,6 +48,10 @@
         "title": "Seguridad",
         "description": "Modelo de amenazas de Sirr, detalles de cifrado y principios de diseño de confianza cero."
       },
+      "/vault-encryption": {
+        "title": "Cifrado del Vault",
+        "description": "Arquitectura de cifrado en reposo de dos niveles: cifrado del lado del servidor con AES-256-GCM, cifrado del lado del cliente, entrega de claves, rotación y copias de seguridad."
+      },
       "/licensing": {
         "title": "Licencias",
         "description": "Detalles de la licencia BSL 1.1, límites del nivel gratuito y licencias comerciales para Sirr."
@@ -84,6 +88,7 @@
       "deployment": "Despliegue",
       "selfHosting": "Autoalojamiento",
       "security": "Seguridad",
+      "vaultEncryption": "Cifrado del Vault",
       "licensing": "Licencias",
       "cli": "Referencia del CLI",
       "mcp": "Servidor MCP",

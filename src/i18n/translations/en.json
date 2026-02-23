@@ -48,6 +48,10 @@
         "title": "Security",
         "description": "Sirr's threat model, encryption details, and zero-trust design principles."
       },
+      "/vault-encryption": {
+        "title": "Vault Encryption",
+        "description": "Two-tier encryption-at-rest architecture: AES-256-GCM server-side encryption, client-side encryption, key delivery, rotation, and backups."
+      },
       "/licensing": {
         "title": "Licensing",
         "description": "BSL 1.1 license details, free tier limits, and commercial licensing for Sirr."
@@ -84,6 +88,7 @@
       "deployment": "Deployment",
       "selfHosting": "Self-Hosting",
       "security": "Security",
+      "vaultEncryption": "Vault Encryption",
       "licensing": "Licensing",
       "cli": "CLI Reference",
       "mcp": "MCP Server",
