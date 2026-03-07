@@ -1,0 +1,299 @@
+export const metadata = {
+  title: 'OpenClaw Integration',
+  description:
+    'Use the @sirrlock/openclaw-skill to manage ephemeral secrets from your OpenClaw AI assistant.',
+}
+
+export const sections = [
+  { title: 'Installation', id: 'installation' },
+  { title: 'Configuration', id: 'configuration' },
+  { title: 'Triggers', id: 'triggers' },
+  { title: 'Operations', id: 'operations' },
+  { title: 'Usage examples', id: 'usage-examples' },
+]
+
+# OpenClaw Integration
+
+Give your local AI assistant secure access to ephemeral secrets. The `@sirrlock/openclaw-skill` workspace skill connects OpenClaw to your Sirr server, letting you push, retrieve, and manage secrets through natural language. {{ className: 'lead' }}
+
+<Note>
+  The skill uses the same authenticated HTTP API as the CLI and SDKs. All security constraints — TTLs, read limits, burn-after-read — are enforced identically.
+</Note>
+
+---
+
+## Installation
+
+Install the skill from npm and add it to your OpenClaw workspace.
+
+<Row>
+  <Col>
+
+    ```bash {{ title: 'Install' }}
+    npm install @sirrlock/openclaw-skill
+    ```
+
+    Then register it in your OpenClaw workspace config:
+
+    ```js {{ title: 'openclaw.config.js' }}
+    module.exports = {
+      skills: [
+        "@sirrlock/openclaw-skill"
+      ]
+    };
+    ```
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Verify' }}
+    # The skill should appear in your workspace
+    openclaw skills list
+    # → sirr (Sirr Secret Manager)
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Configuration
+
+The skill reads two config values from your workspace settings.
+
+<Row>
+  <Col>
+
+    <Properties>
+      <Property name="serverUrl" type="string">
+        Base URL of your Sirr server. Defaults to `http://localhost:39999`.
+      </Property>
+      <Property name="token" type="string">
+        Bearer token — your master key or a scoped API key created via the [API Keys](/api-keys) endpoint. For multi-tenant mode, use a principal key.
+      </Property>
+      <Property name="org" type="string">
+        Organization ID for multi-tenant mode. When set, all operations are scoped to this org. Leave empty for public bucket mode.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```json {{ title: 'skill.json config schema' }}
+    {
+      "config": {
+        "serverUrl": {
+          "type": "string",
+          "default": "http://localhost:39999"
+        },
+        "token": {
+          "type": "string",
+          "secret": true
+        },
+        "org": {
+          "type": "string",
+          "description": "Org ID for multi-tenant mode"
+        }
+      }
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Triggers
+
+The skill activates automatically when OpenClaw detects relevant keywords in your conversation.
+
+| Keyword | Example prompt |
+|---------|---------------|
+| `secret` | "Store this as a secret" |
+| `sirr` | "Push to sirr with a 1-hour TTL" |
+| `credential` | "Save this credential for the deploy" |
+| `burn after read` | "Create a burn-after-read secret" |
+| `ephemeral` | "Make this ephemeral — one read only" |
+| `api key` | "List all api keys" |
+| `vault` | "What's in the vault?" |
+
+You can also invoke the skill directly by name.
+
+---
+
+## Operations
+
+The skill covers the full Sirr API surface across secrets, audit, webhooks, keys, identity, and multi-tenant org management.
+
+### Secrets
+
+<Row>
+  <Col>
+
+    - **getSecret** — Retrieve a secret by key. Returns `null` if burned or expired.
+    - **pushSecret** — Store a new secret with optional TTL, max reads, and seal behavior
+    - **listSecrets** — List all secret metadata (values never included)
+    - **patchSecret** — Update TTL, read limit, or value on a sealable secret
+    - **deleteSecret** — Delete a secret immediately
+    - **pruneSecrets** — Remove all expired secrets
+
+  </Col>
+  <Col>
+
+    ```ts {{ title: 'TypeScript API' }}
+    import {
+      getSecret,
+      pushSecret,
+      listSecrets,
+      patchSecret,
+      deleteSecret,
+      pruneSecrets,
+    } from '@sirrlock/openclaw-skill';
+    ```
+
+  </Col>
+</Row>
+
+### Audit, Webhooks, and Server
+
+<Row>
+  <Col>
+
+    - **queryAudit** — Search audit log by timestamp, action, and limit
+    - **createWebhook** / **listWebhooks** / **deleteWebhook** — Manage webhook subscriptions
+    - **healthCheck** — Verify server connectivity (no auth required)
+
+  </Col>
+  <Col>
+
+    ```ts {{ title: 'TypeScript API' }}
+    import {
+      queryAudit,
+      createWebhook,
+      listWebhooks,
+      deleteWebhook,
+      healthCheck,
+    } from '@sirrlock/openclaw-skill';
+    ```
+
+  </Col>
+</Row>
+
+### Identity and Keys
+
+<Row>
+  <Col>
+
+    - **getMe** — Return the current principal's identity, org, role, permissions, and all active keys. Requires a principal key.
+    - **patchMe** — Update the current principal's metadata.
+    - **createKey** — Create a new key for the current principal. The raw key is returned once — save it immediately. Accepts `valid_for_seconds` or `valid_before` for time-windowed keys.
+    - **deleteKey** — Revoke one of the current principal's keys by ID.
+
+  </Col>
+  <Col>
+
+    ```ts {{ title: 'TypeScript API' }}
+    import {
+      getMe,
+      patchMe,
+      createKey,
+      deleteKey,
+    } from '@sirrlock/openclaw-skill';
+    ```
+
+  </Col>
+</Row>
+
+### Org Management
+
+<Row>
+  <Col>
+
+    - **createOrg** / **listOrgs** / **deleteOrg** — Manage organizations. Requires master key.
+    - **createPrincipal** / **listPrincipals** / **deletePrincipal** — Manage principals within an org. Requires master key.
+    - **createRole** / **listRoles** / **deleteRole** — Manage custom roles per org. Requires master key.
+
+  </Col>
+  <Col>
+
+    ```ts {{ title: 'TypeScript API' }}
+    import {
+      createOrg,
+      listOrgs,
+      deleteOrg,
+      createPrincipal,
+      listPrincipals,
+      deletePrincipal,
+      createRole,
+      listRoles,
+      deleteRole,
+    } from '@sirrlock/openclaw-skill';
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Usage examples
+
+Once installed, talk to your OpenClaw assistant naturally. The skill translates your intent into Sirr API calls.
+
+### Store a burn-after-read secret
+
+```txt {{ title: 'Conversation' }}
+You:   Store the database password as a burn-after-read secret
+
+Sirr:  [Calls pushSecret({ key: "db-password", value: "...", max_reads: 1 })]
+
+       Done. Secret "db-password" stored. Burns after first read.
+```
+
+### Retrieve and use a secret
+
+```txt {{ title: 'Conversation' }}
+You:   What's the db-password secret?
+
+Sirr:  [Calls getSecret("db-password")]
+
+       The secret value is: postgres://admin:hunter2@db.example.com/mydb
+       Warning: this secret has now been read 1 time (max: 1) — it's burned.
+```
+
+### Audit recent activity
+
+```txt {{ title: 'Conversation' }}
+You:   Show me the audit log for the last hour
+
+Sirr:  [Calls queryAudit({ since: 1709312400, limit: 50 })]
+
+       3 events:
+       - secret.create  db-password     10:30:01
+       - secret.read    db-password     10:31:15
+       - secret.delete  old-api-token   10:45:22
+```
+
+### Cleanup expired secrets
+
+```txt {{ title: 'Conversation' }}
+You:   Prune any expired secrets
+
+Sirr:  [Calls pruneSecrets()]
+
+       Pruned 4 expired secrets. 2 active secrets remain.
+```
+
+### Create a time-windowed key for CI
+
+```txt {{ title: 'Conversation' }}
+You:   Create a deploy key that expires in 24 hours
+
+Sirr:  [Calls createKey({ name: "ci-deploy", valid_for_seconds: 86400 })]
+
+       Key created: sirr_key_7f3a9b2c...  (save this — shown only once)
+       Expires: 2026-03-06T10:00:00Z
+```
+
+<Note>
+  The skill never caches secret values. Every retrieval is a live call to the Sirr server with full TTL and read-limit enforcement.
+</Note>

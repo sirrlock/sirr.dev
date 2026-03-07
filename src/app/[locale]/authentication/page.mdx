@@ -1,0 +1,228 @@
+export const metadata = {
+  title: 'Authentication',
+  description:
+    'Learn how Sirr authenticates API requests using a single bearer token that also seeds encryption key derivation.',
+}
+
+export const sections = [
+  { title: 'Bearer token', id: 'bearer-token' },
+  { title: 'Making authenticated requests', id: 'making-authenticated-requests' },
+  { title: 'Scoped API keys', id: 'scoped-api-keys' },
+  { title: 'Principal key authentication', id: 'principal-key-authentication' },
+  { title: 'Token security', id: 'token-security' },
+]
+
+# Authentication
+
+Every request to the Sirr API must include a bearer token. Sirr uses a single master key for authentication — there are no API key pairs, OAuth flows, or session cookies. Set `SIRR_MASTER_KEY` when you start the server and pass it as a bearer token with every request. {{ className: 'lead' }}
+
+## Bearer token
+
+Sirr authenticates requests using the `SIRR_MASTER_KEY` environment variable. This key serves a dual purpose: it is both the bearer token for API authentication and the seed for Argon2id key derivation used to encrypt secrets at rest.
+
+<Note>
+  `SIRR_MASTER_KEY` has dual purpose — it seeds the Argon2id key derivation for
+  encrypting secrets AND authenticates every API request. Treat it like a root
+  password. If it changes, previously stored secrets become unreadable.
+</Note>
+
+When the server starts, it reads `SIRR_MASTER_KEY` from the environment. Every incoming request's `Authorization` header is compared against this value using a constant-time comparison to prevent timing attacks.
+
+```bash {{ title: 'Starting the server' }}
+export SIRR_MASTER_KEY="your-secret-master-key"
+sirr
+```
+
+---
+
+## Making authenticated requests
+
+Include the token in the `Authorization` header as a standard Bearer token. Every endpoint except the health check requires authentication.
+
+<Row>
+  <Col>
+
+    ### Header format
+
+    ```
+    Authorization: Bearer <token>
+    ```
+
+    The token value must match the `SIRR_MASTER_KEY` the server was started with. Requests without a valid token receive a `401 Unauthorized` response.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'cURL' }}
+    curl -H "Authorization: Bearer $SIRR_TOKEN" \
+      http://localhost:39999/secrets
+    ```
+
+  </Col>
+</Row>
+
+### SDK examples
+
+If you use one of the official SDKs, pass the token once when constructing the client and every request is authenticated automatically.
+
+<CodeGroup title="Authenticated client">
+
+```js {{ title: 'Node.js' }}
+import { SirrClient } from '@sirrlock/node'
+
+const sirr = new SirrClient({
+  server: process.env.SIRR_SERVER,
+  token: process.env.SIRR_TOKEN,
+})
+
+const secret = await sirr.get('db/password')
+```
+
+```python {{ title: 'Python' }}
+import os
+from sirr import SirrClient
+
+client = SirrClient(
+    server=os.environ["SIRR_SERVER"],
+    token=os.environ["SIRR_TOKEN"],
+)
+
+secret = client.get("db/password")
+```
+
+```csharp {{ title: '.NET' }}
+using Sirr;
+
+var client = new SirrClient(new SirrOptions
+{
+    Server = Environment.GetEnvironmentVariable("SIRR_SERVER"),
+    Token = Environment.GetEnvironmentVariable("SIRR_TOKEN"),
+});
+
+var secret = await client.GetAsync("db/password");
+```
+
+</CodeGroup>
+
+<div className="not-prose">
+  <Button href="/sdks" variant="text" arrow="right">
+    <>Check out the official SDKs</>
+  </Button>
+</div>
+
+---
+
+## Scoped API keys
+
+For production environments where sharing the master key is undesirable, Sirr supports scoped API keys. Each key has explicit permissions (`read`, `write`, `delete`, `admin`) and an optional key prefix restriction.
+
+Scoped keys authenticate the same way — via the `Authorization: Bearer <key>` header. The server determines what the key is allowed to do based on its permissions.
+
+```bash {{ title: 'Using a scoped key' }}
+# This key can only read secrets under the "ci/" prefix
+curl http://localhost:39999/secrets/ci/deploy-token \
+  -H "Authorization: Bearer sirr_sk_7f3a..."
+```
+
+### Common patterns
+
+| Use case | Permissions | Prefix |
+| --- | --- | --- |
+| CI/CD pipeline | `read`, `write` | `ci/` |
+| Read-only dashboard | `read` | — |
+| External contractor | `read` | `shared/` |
+
+<div className="not-prose">
+  <Button href="/api-keys" variant="text" arrow="right">
+    <>Full API keys documentation</>
+  </Button>
+</div>
+
+---
+
+## Principal key authentication {{ id: 'principal-key-authentication' }}
+
+For multi-tenant deployments, Sirr supports principal key authentication in addition to the master key. Principal keys are scoped to an organization and carry role-based permissions.
+
+### Master key vs principal key
+
+| | **Master key** (`SIRR_API_KEY`) | **Principal key** |
+| --- | --- | --- |
+| **Scope** | Instance-wide | Single organization |
+| **Permissions** | Full access to all endpoints | Limited by assigned role |
+| **Use case** | Admin operations, org/principal/role management | Day-to-day secret operations |
+| **Created via** | Environment variable at server start | `POST /me/keys` API endpoint |
+
+### How principal keys are created
+
+A principal is created by an admin using the master key (`POST /orgs/:org_id/principals`). The principal then authenticates with a temporary bootstrap key (created during `--init` or by the admin) and creates their own long-lived keys via `POST /me/keys`.
+
+```bash {{ title: 'Creating a principal key' }}
+# Authenticate with an existing principal key, then create a new one
+curl -X POST http://localhost:39999/me/keys \
+  -H "Authorization: Bearer $SIRR_PRINCIPAL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "deploy-key",
+    "valid_before": 1700100000
+  }'
+```
+
+### Time-windowed keys
+
+Principal keys support optional time windows via `valid_after` and `valid_before` timestamps. A key is only accepted if the current time falls within its validity window. This is useful for temporary access grants, scheduled deployments, and key rotation.
+
+```bash {{ title: 'Time-windowed key' }}
+# Key valid only during a 2-hour maintenance window
+curl -X POST http://localhost:39999/me/keys \
+  -H "Authorization: Bearer $SIRR_PRINCIPAL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "maintenance-window",
+    "valid_after": 1700000000,
+    "valid_before": 1700007200
+  }'
+```
+
+### Role-based permissions
+
+Each principal is assigned a role that determines what they can do. Roles carry a 15-bit permission bitflag serialized as a letter string.
+
+| Role | Permissions | Description |
+| --- | --- | --- |
+| `reader` | `rRl` | Read and list secrets |
+| `writer` | `rRlLcCpP` | Read, list, create, and patch secrets |
+| `admin` | `rRlLcCpPaAmM` | All writer permissions plus audit and webhook management |
+| `owner` | `rRlLcCpPaAmMdD` | Full access including delete operations |
+
+Custom roles can be created per-org via `POST /orgs/:org_id/roles` with any combination of permission letters.
+
+### The ResolvedAuth flow
+
+When a request arrives, Sirr resolves the authentication in this order:
+
+1. **Master key check** -- If the `Authorization` bearer token matches `SIRR_API_KEY`, the request is granted full access with no org or principal context.
+2. **Principal key lookup** -- The token is looked up in the principal keys table. If found and within its validity window, the request is authenticated as the associated principal with the permissions of their role.
+3. **401 Unauthorized** -- If neither match, the request is rejected.
+
+<Note>
+  Master key holders bypass all permission checks. They can manage orgs, principals, and roles but do not have implicit access to org-scoped secrets. Use a principal key for org-scoped operations.
+</Note>
+
+---
+
+## Token security
+
+The master key is the single credential that protects your entire Sirr instance. Follow these guidelines to keep it safe.
+
+- **Use TLS in production.** Without HTTPS the bearer token is sent in plaintext over the network. Always terminate TLS in front of Sirr — via a reverse proxy, load balancer, or service mesh.
+- **Never commit tokens to git.** Use environment variables, a `.env` file excluded from version control, or a secrets manager like Vault or AWS Secrets Manager.
+- **Rotate carefully.** Changing `SIRR_MASTER_KEY` invalidates all existing encrypted secrets because the Argon2id-derived encryption key changes. Plan a migration window if you need to rotate.
+- **Constant-time comparison.** Sirr compares the provided token against the master key using a constant-time algorithm, preventing timing side-channel attacks that could leak the key one character at a time.
+- **Limit network exposure.** Bind Sirr to `127.0.0.1` or a private network interface when it does not need to be publicly reachable.
+
+<Note>
+  If you suspect your master key has been compromised, rotate it immediately.
+  All secrets encrypted under the old key will become permanently unreadable —
+  re-push any secrets that are still needed after rotation.
+</Note>

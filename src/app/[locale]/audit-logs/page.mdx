@@ -1,0 +1,154 @@
+export const metadata = {
+  title: 'Audit Logs',
+  description:
+    'Query the Sirr audit log to track who accessed what, when, and how. Filter by action, time range, and key prefix.',
+}
+
+export const sections = [
+  { title: 'Overview', id: 'overview' },
+  { title: 'Query audit logs', id: 'get-audit' },
+  { title: 'Event types', id: 'event-types' },
+  { title: 'Retention', id: 'retention' },
+]
+
+# Audit Logs
+
+Sirr records an append-only audit trail of every secret operation. Query the audit log to track access patterns, investigate incidents, and satisfy compliance requirements. {{ className: 'lead' }}
+
+## Overview
+
+Every create, read, delete, burn, and expiry event is logged with a timestamp, action type, secret key, and source metadata. Audit logs are stored alongside the encrypted database and are retained according to your configured retention policy.
+
+<Note>
+  Audit logs never contain secret values — only metadata about operations. The log records which key was accessed, not what the value was.
+</Note>
+
+---
+
+## Query audit logs {{ tag: 'GET', label: '/audit', id: 'get-audit' }}
+
+<Row>
+  <Col>
+
+    Retrieve audit log entries with optional filters. Results are returned in reverse chronological order (newest first).
+
+    ### Query parameters
+
+    <Properties>
+      <Property name="since" type="integer">
+        Unix timestamp. Only return events after this time.
+      </Property>
+      <Property name="until" type="integer">
+        Unix timestamp. Only return events before this time.
+      </Property>
+      <Property name="action" type="string">
+        Filter by event type (e.g. `secret.read`, `secret.created`). See [Event types](#event-types) below.
+      </Property>
+      <Property name="key" type="string">
+        Filter by secret key or key prefix. Supports glob patterns (e.g. `db/*`).
+      </Property>
+      <Property name="limit" type="integer" default="100">
+        Maximum number of entries to return. Max 1000.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="GET" label="/audit">
+
+    ```bash {{ title: 'cURL' }}
+    # Last 50 read events
+    curl "http://localhost:39999/audit?action=secret.read&limit=50" \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY"
+    ```
+
+    ```js {{ title: 'Node.js' }}
+    import { SirrClient } from '@sirrlock/node'
+
+    const sirr = new SirrClient({
+      server: process.env.SIRR_SERVER,
+      token: process.env.SIRR_TOKEN,
+    })
+
+    const logs = await sirr.audit({
+      action: 'secret.read',
+      limit: 50,
+    })
+    ```
+
+    ```python {{ title: 'Python' }}
+    from sirr import SirrClient
+
+    client = SirrClient(
+        server=os.environ["SIRR_SERVER"],
+        token=os.environ["SIRR_TOKEN"],
+    )
+
+    logs = client.audit(action="secret.read", limit=50)
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response' }}
+    {
+      "entries": [
+        {
+          "id": "01HX...",
+          "action": "secret.read",
+          "key": "db/password",
+          "timestamp": 1700003600,
+          "metadata": {
+            "read_count": 1,
+            "max_reads": 3
+          }
+        },
+        {
+          "id": "01HX...",
+          "action": "secret.created",
+          "key": "db/password",
+          "timestamp": 1700000000,
+          "metadata": {
+            "ttl_seconds": 3600,
+            "max_reads": 3
+          }
+        }
+      ]
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Event types
+
+Every audit log entry has an `action` field indicating what happened.
+
+| Action | Description |
+| --- | --- |
+| `secret.created` | A new secret was pushed to the server |
+| `secret.read` | A secret was retrieved and decrypted |
+| `secret.deleted` | A secret was explicitly deleted |
+| `secret.burned` | A secret was destroyed after reaching its read limit |
+| `secret.expired` | A secret was destroyed after its TTL elapsed |
+| `secret.pruned` | An expired secret was removed during a prune operation |
+
+Each entry includes a `metadata` object with action-specific details — for example, `secret.read` includes the current `read_count` and `max_reads`, while `secret.created` includes `ttl_seconds` and `max_reads`.
+
+---
+
+## Retention
+
+Audit log retention is controlled by the `SIRR_AUDIT_RETENTION_DAYS` environment variable. Entries older than the configured retention period are automatically purged during prune operations.
+
+<Properties>
+  <Property name="SIRR_AUDIT_RETENTION_DAYS" type="integer" default="90">
+    Number of days to retain audit log entries. Set to `0` to disable automatic purging (retain indefinitely).
+  </Property>
+</Properties>
+
+<Note>
+  Audit logs are included when you back up the Sirr data directory. The `sirr.db` file contains both encrypted secrets and the audit trail.
+</Note>

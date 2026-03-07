@@ -1,0 +1,163 @@
+export const metadata = {
+  title: 'Solo Dev Quickstart',
+  description:
+    'Install Sirr locally, push your first secret, retrieve it before it burns, then wire up the MCP server so Claude can read secrets in your local instance.',
+}
+
+export const sections = [
+  { title: 'Install', id: 'install' },
+  { title: 'Push your first secret', id: 'push-your-first-secret' },
+  { title: 'Retrieve a secret', id: 'retrieve-a-secret' },
+  { title: 'Connect MCP to your local instance', id: 'connect-mcp' },
+  { title: 'What is next', id: 'what-is-next' },
+]
+
+# Solo Dev Quickstart
+
+No org, no team, no ceremony. Install the server locally, push a secret, retrieve it, and wire Claude up to the vault — all in under five minutes. {{ className: 'lead' }}
+
+<Note>
+  Sirr requires a `SIRR_MASTER_KEY` to start. This key authenticates all API calls and seeds encryption. Generate one with `openssl rand -hex 32` and keep it out of git.
+</Note>
+
+## Install
+
+<CodeGroup>
+
+```bash {{ title: 'Docker' }}
+docker run -d \
+  --name sirrd \
+  -p 39999:39999 \
+  -v ./sirr-data:/data \
+  -e SIRR_MASTER_KEY="$(openssl rand -hex 32)" \
+  -e SIRR_DATA_DIR=/data \
+  ghcr.io/sirrlock/sirrd
+```
+
+```bash {{ title: 'Homebrew' }}
+brew tap sirrlock/tap
+brew install sirrlock/tap/sirrd   # server daemon
+brew install sirrlock/tap/sirr    # CLI client
+```
+
+```bash {{ title: 'Scoop (Windows)' }}
+scoop bucket add sirrlock https://github.com/sirrlock/scoop-bucket
+scoop install sirrlock/sirrd
+scoop install sirrlock/sirr
+```
+
+```bash {{ title: 'Binary download' }}
+curl -fsSL https://get.sirr.dev | sh
+```
+
+</CodeGroup>
+
+If you installed via Homebrew or binary, start the server manually and export the key:
+
+```bash {{ title: 'Start the server' }}
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+sirrd serve
+# → Server listening on http://localhost:39999
+# → Master key: <your-key>   ← save this
+```
+
+## Push your first secret
+
+Push a secret with a 1-hour TTL and a single-read limit. Once read, it is gone.
+
+<CodeGroup>
+
+```bash {{ title: 'CLI' }}
+sirr push DB_URL="postgres://user:pass@db:5432/myapp" \
+  --reads 1 \
+  --ttl 1h
+```
+
+```bash {{ title: 'cURL' }}
+curl -X POST http://localhost:39999/secrets \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "DB_URL",
+    "value": "postgres://user:pass@db:5432/myapp",
+    "max_reads": 1,
+    "ttl_seconds": 3600
+  }'
+```
+
+</CodeGroup>
+
+## Retrieve a secret
+
+Reading the secret decrements the read counter. With `max_reads: 1` this is the only read — the secret destroys itself immediately after.
+
+<CodeGroup>
+
+```bash {{ title: 'CLI' }}
+sirr get DB_URL
+```
+
+```bash {{ title: 'cURL' }}
+curl http://localhost:39999/secrets/DB_URL \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY"
+```
+
+</CodeGroup>
+
+Try reading it again — you will get `404 Not Found`. The vault already burned it.
+
+### Push and pull .env files
+
+```bash {{ title: 'Push and pull .env' }}
+# Push your entire .env with a 24-hour TTL
+sirr push .env --ttl 24h
+
+# On another machine, pull it back
+sirr pull .env
+```
+
+## Connect MCP to your local instance
+
+Install the Sirr MCP server so Claude (or any MCP-compatible AI tool) can push and pull secrets directly from your local Sirr instance during a conversation.
+
+```bash {{ title: 'Install MCP server' }}
+npm install -g @sirrlock/mcp
+```
+
+Add a `.mcp.json` in your project root (or home directory):
+
+```json {{ title: '.mcp.json' }}
+{
+  "mcpServers": {
+    "sirr": {
+      "command": "sirr-mcp",
+      "env": {
+        "SIRR_SERVER": "http://localhost:39999",
+        "SIRR_TOKEN": "<your-SIRR_MASTER_KEY>"
+      }
+    }
+  }
+}
+```
+
+Verify the connection:
+
+```bash {{ title: 'Health check' }}
+SIRR_SERVER=http://localhost:39999 \
+SIRR_TOKEN=$SIRR_MASTER_KEY \
+sirr-mcp --health
+# → OK
+```
+
+Now Claude can use `push_secret` and `get_secret` tools. Secrets pushed through MCP obey the same TTL and read-limit rules — a secret with `max_reads: 1` burns after Claude reads it, even across sessions.
+
+<Note>
+  The MCP server uses your master key directly. For shared or team environments, create a scoped API key with only the permissions you need. See [API Keys](/api-keys).
+</Note>
+
+## What is next
+
+- [DevOps Quickstart](/quickstart/devops) — add an org, create principals, and store rotating secrets for Claude and GitHub
+- [MCP Server](/mcp) — full MCP tool reference and multi-tenant configuration
+- [API Keys](/api-keys) — scope access to specific secret prefixes
+- [Architecture](/architecture) — how Sirr encrypts and stores secrets

@@ -1,0 +1,243 @@
+export const metadata = {
+  title: 'API Keys',
+  description:
+    'Create scoped API keys with granular permissions and key prefix restrictions for secure multi-tenant and CI/CD access.',
+}
+
+export const sections = [
+  { title: 'Overview', id: 'overview' },
+  { title: 'Create an API key', id: 'post-keys' },
+  { title: 'List API keys', id: 'get-keys' },
+  { title: 'Delete an API key', id: 'delete-keys-id' },
+  { title: 'Permission model', id: 'permission-model' },
+  { title: 'Prefix scoping', id: 'prefix-scoping' },
+]
+
+# API Keys
+
+Scoped API keys let you grant limited access to your Sirr instance without sharing the master key. Each key has explicit permissions and an optional key prefix restriction. {{ className: 'lead' }}
+
+## Overview
+
+The master key (`SIRR_MASTER_KEY`) is all-powerful — it can read, write, and delete any secret. Scoped API keys provide a way to delegate access with fine-grained control:
+
+- **Permissions**: Grant only the operations each consumer needs (read, write, delete, or admin)
+- **Prefix scoping**: Restrict a key to secrets under a specific path prefix (e.g. `staging/*`)
+- **Auditable**: Every API key operation is recorded in the [audit log](/audit-logs)
+
+<Note>
+  Scoped API keys authenticate the same way as the master key — via the `Authorization: Bearer <key>` header. The server determines permissions based on which key is presented.
+</Note>
+
+---
+
+## Create an API key {{ tag: 'POST', label: '/keys', id: 'post-keys' }}
+
+<Row>
+  <Col>
+
+    Create a new scoped API key. The key value is returned only once in the response — store it securely.
+
+    ### Required attributes
+
+    <Properties>
+      <Property name="name" type="string">
+        A human-readable label for this key (e.g. "CI/CD pipeline", "staging reader").
+      </Property>
+      <Property name="permissions" type="string[]">
+        Array of permission strings. See [Permission model](#permission-model) below.
+      </Property>
+    </Properties>
+
+    ### Optional attributes
+
+    <Properties>
+      <Property name="prefix" type="string">
+        Restrict this key to secrets whose key starts with this prefix. Omit for access to all secrets (subject to permissions).
+      </Property>
+      <Property name="expires_at" type="integer">
+        Unix timestamp when this key expires. Omit for no expiration.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="POST" label="/keys">
+
+    ```bash {{ title: 'cURL' }}
+    curl -X POST http://localhost:39999/keys \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "CI/CD pipeline",
+        "permissions": ["read", "write"],
+        "prefix": "ci/"
+      }'
+    ```
+
+    ```js {{ title: 'Node.js' }}
+    const key = await sirr.keys.create({
+      name: 'CI/CD pipeline',
+      permissions: ['read', 'write'],
+      prefix: 'ci/',
+    })
+
+    console.log(key.token) // Only shown once
+    ```
+
+    ```python {{ title: 'Python' }}
+    key = client.keys.create(
+        name="CI/CD pipeline",
+        permissions=["read", "write"],
+        prefix="ci/",
+    )
+
+    print(key.token)  # Only shown once
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response (201)' }}
+    {
+      "id": "key_a1b2c3d4",
+      "name": "CI/CD pipeline",
+      "token": "sirr_sk_7f3a...",
+      "permissions": ["read", "write"],
+      "prefix": "ci/",
+      "expires_at": null,
+      "created_at": 1700000000
+    }
+    ```
+
+    <Note>
+      The `token` field is only included in the creation response. Store it immediately — it cannot be retrieved again.
+    </Note>
+
+  </Col>
+</Row>
+
+---
+
+## List API keys {{ tag: 'GET', label: '/keys', id: 'get-keys' }}
+
+<Row>
+  <Col>
+
+    List all API keys. The `token` field is redacted in list responses — only the key ID, name, permissions, and metadata are returned.
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="GET" label="/keys">
+
+    ```bash {{ title: 'cURL' }}
+    curl http://localhost:39999/keys \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY"
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response' }}
+    {
+      "keys": [
+        {
+          "id": "key_a1b2c3d4",
+          "name": "CI/CD pipeline",
+          "permissions": ["read", "write"],
+          "prefix": "ci/",
+          "expires_at": null,
+          "created_at": 1700000000,
+          "last_used_at": 1700003600
+        }
+      ]
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Delete an API key {{ tag: 'DELETE', label: '/keys/:id', id: 'delete-keys-id' }}
+
+<Row>
+  <Col>
+
+    Revoke an API key immediately. Any requests using this key will receive `401 Unauthorized` after deletion.
+
+    ### Path parameters
+
+    <Properties>
+      <Property name="id" type="string">
+        The key ID returned when it was created.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="DELETE" label="/keys/:id">
+
+    ```bash {{ title: 'cURL' }}
+    curl -X DELETE http://localhost:39999/keys/key_a1b2c3d4 \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY"
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response' }}
+    {
+      "deleted": true
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Permission model
+
+Each API key is granted one or more permissions that control what operations it can perform.
+
+| Permission | Allows |
+| --- | --- |
+| `read` | `GET /secrets/:key` — retrieve and decrypt secrets |
+| `write` | `POST /secrets` — create new secrets |
+| `delete` | `DELETE /secrets/:key` — delete specific secrets |
+| `admin` | All operations including `GET /secrets` (list), `/prune`, `/audit`, `/webhooks`, and `/keys` |
+
+<Note>
+  The `admin` permission is a superset that includes `read`, `write`, and `delete`. Only grant it to trusted consumers that need full access.
+</Note>
+
+### Common patterns
+
+| Use case | Permissions | Prefix |
+| --- | --- | --- |
+| CI/CD pipeline | `read`, `write` | `ci/` |
+| Read-only dashboard | `read` | — |
+| Cleanup cron job | `delete` | — |
+| Team lead | `admin` | `team-a/` |
+| External contractor | `read` | `shared/` |
+
+---
+
+## Prefix scoping
+
+When a `prefix` is set on an API key, the key can only operate on secrets whose key starts with that prefix.
+
+```
+# Key with prefix "staging/"
+✅ staging/db-url      → allowed
+✅ staging/api-key     → allowed
+❌ production/db-url   → 403 Forbidden
+❌ db-url              → 403 Forbidden
+```
+
+Prefix scoping is enforced server-side on every request. Attempting to access a secret outside the key's prefix returns `403 Forbidden` without revealing whether the secret exists.
+
+<Note>
+  Prefix scoping works with all permissions. A key with `["read", "write"]` and prefix `"staging/"` can only read and write secrets under `staging/`.
+</Note>

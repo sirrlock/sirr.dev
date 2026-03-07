@@ -1,0 +1,381 @@
+{
+  "meta": {
+    "siteTitle": "Sirr",
+    "siteTitleTemplate": "%s - Sirr Docs",
+    "siteDescription": "Documentation for Sirr — the ephemeral secret vault built for the AI era.",
+    "pages": {
+      "/": {
+        "title": "Sirr Documentation",
+        "description": "Documentation for Sirr — the ephemeral secret vault built for the AI era. Push secrets with TTL and read limits."
+      },
+      "/quickstart": {
+        "title": "Quickstart",
+        "description": "Get started with Sirr in minutes. Install, configure, and push your first ephemeral secret."
+      },
+      "/quickstart/solo-dev": {
+        "title": "Solo Dev Quickstart",
+        "description": "Install Sirr locally, push your first secret, and connect the MCP server to your local instance."
+      },
+      "/quickstart/devops": {
+        "title": "DevOps Quickstart",
+        "description": "Bootstrap a Sirr org with two patchable secrets — a Claude API key and GitHub PAT — each locked to a dedicated principal."
+      },
+      "/quickstart/multi-team": {
+        "title": "Multi-Team Quickstart",
+        "description": "Multiple orgs, isolated teams, and org-level audit logs on a single Sirr instance."
+      },
+      "/install": {
+        "title": "Install",
+        "description": "Every way to install sirrd and sirr — install script, Homebrew, Scoop, Docker, crates.io, npm, and binary download."
+      },
+      "/architecture": {
+        "title": "Architecture",
+        "description": "How Sirr encrypts, stores, and expires secrets using ChaCha20Poly1305, Argon2id, and redb."
+      },
+      "/configuration": {
+        "title": "Configuration",
+        "description": "All environment variables and configuration options for the Sirr server and CLI clients."
+      },
+      "/authentication": {
+        "title": "Authentication",
+        "description": "How to authenticate with the Sirr API using bearer tokens."
+      },
+      "/errors": {
+        "title": "Errors",
+        "description": "HTTP status codes, error response format, and troubleshooting for the Sirr API."
+      },
+      "/sdks": {
+        "title": "SDKs",
+        "description": "Official Sirr client libraries for Node.js, Python, and .NET."
+      },
+      "/api-reference": {
+        "title": "API Reference",
+        "description": "Complete HTTP API reference for all Sirr server endpoints."
+      },
+      "/audit-logs": {
+        "title": "Audit Logs",
+        "description": "Query the append-only audit trail of secret operations."
+      },
+      "/webhooks": {
+        "title": "Webhooks",
+        "description": "Register HTTP endpoints to receive real-time event notifications from Sirr."
+      },
+      "/api-keys": {
+        "title": "API Keys",
+        "description": "Create scoped API keys with granular permissions and prefix restrictions."
+      },
+      "/deployment": {
+        "title": "Deployment",
+        "description": "Deploy Sirr with Docker, Homebrew, binary download, or build from source."
+      },
+      "/self-hosting": {
+        "title": "Self-Hosting",
+        "description": "Production deployment guide with reverse proxy, TLS, backups, and monitoring."
+      },
+      "/security": {
+        "title": "Security",
+        "description": "Sirr's threat model, encryption details, and zero-trust design principles."
+      },
+      "/vault-encryption": {
+        "title": "Vault Encryption",
+        "description": "Two-tier encryption-at-rest architecture: AES-256-GCM server-side encryption, client-side encryption, key delivery, rotation, and backups."
+      },
+      "/licensing": {
+        "title": "Licensing",
+        "description": "BSL 1.1 license details, free tier limits, and commercial licensing for Sirr."
+      },
+      "/cli": {
+        "title": "CLI Reference",
+        "description": "Complete reference for all 9 Sirr CLI commands with examples."
+      },
+      "/mcp": {
+        "title": "MCP Server",
+        "description": "Set up the Sirr MCP server for Claude Code AI integration."
+      },
+      "/n8n": {
+        "title": "n8n Integration",
+        "description": "Use the @sirrlock/n8n-nodes-sirr community node to manage secrets from n8n workflows."
+      },
+      "/openclaw": {
+        "title": "OpenClaw Integration",
+        "description": "Use the @sirrlock/openclaw-skill to manage secrets from your OpenClaw AI assistant."
+      },
+      "/ai-workflows": {
+        "title": "AI Workflows",
+        "description": "Patterns for using Sirr with AI agents, CI/CD pipelines, and team workflows."
+      },
+      "/blog": {
+        "title": "Blog",
+        "description": "What we shipped this week — progress updates from the Sirr team."
+      }
+    }
+  },
+  "nav": {
+    "groups": {
+      "guides": "Guides",
+      "server": "Server",
+      "tools": "Tools"
+    },
+    "links": {
+      "introduction": "Introduction",
+      "quickstart": "Quickstart",
+      "quickstartSoloDev": "Solo Dev",
+      "quickstartDevops": "DevOps",
+      "quickstartMultiTeam": "Multi-Team",
+      "install": "Install",
+      "architecture": "Architecture",
+      "configuration": "Configuration",
+      "authentication": "Authentication",
+      "errors": "Errors",
+      "sdks": "SDKs",
+      "apiReference": "API Reference",
+      "auditLogs": "Audit Logs",
+      "webhooks": "Webhooks",
+      "apiKeys": "API Keys",
+      "deployment": "Deployment",
+      "selfHosting": "Self-Hosting",
+      "security": "Security",
+      "vaultEncryption": "Vault Encryption",
+      "licensing": "Licensing",
+      "cli": "CLI Reference",
+      "mcp": "MCP Server",
+      "n8n": "n8n Integration",
+      "openclaw": "OpenClaw Integration",
+      "aiWorkflows": "AI Workflows",
+      "blog": "Blog"
+    },
+    "topLevel": {
+      "docs": "Docs",
+      "github": "GitHub"
+    }
+  },
+  "common": {
+    "readMore": "Read more",
+    "previous": "Previous",
+    "next": "Next",
+    "copyright": "Copyright {year}. All rights reserved.",
+    "getStarted": "Get started",
+    "exploreSDKs": "Explore SDKs",
+    "officialLibraries": "Official libraries",
+    "followOnX": "Follow us on X",
+    "followOnGithub": "Follow us on GitHub",
+    "joinDiscord": "Join our Discord server"
+  },
+  "home": {
+    "heroTitle": "Sirr Documentation",
+    "heroLead": "The secret manager built for the AI era. Every secret expires. By design. Push secrets with TTL and read limits — once conditions are met, the secret is gone.",
+    "gettingStarted": "Getting started",
+    "gettingStartedLead": "Install Sirr as a single binary or Docker container, configure your master key, and start pushing ephemeral secrets in minutes."
+  },
+  "guides": [
+    {
+      "href": "/quickstart/solo-dev",
+      "name": "Solo Dev",
+      "description": "Install locally, push a secret, retrieve it, and wire Claude up via MCP. No org needed."
+    },
+    {
+      "href": "/quickstart/devops",
+      "name": "DevOps",
+      "description": "One org, two patchable secrets. Rotate a Claude API key and GitHub PAT without changing the key name."
+    },
+    {
+      "href": "/quickstart/multi-team",
+      "name": "Multi-Team",
+      "description": "Multiple isolated orgs on one instance, with audit logs to track every operation across teams."
+    },
+    {
+      "href": "/architecture",
+      "name": "Architecture",
+      "description": "Understand how Sirr encrypts, stores, and expires secrets."
+    },
+    {
+      "href": "/security",
+      "name": "Security",
+      "description": "Threat model, encryption details, and zero-trust design."
+    },
+    {
+      "href": "/ai-workflows",
+      "name": "AI Workflows",
+      "description": "Patterns for using Sirr with Claude, LangChain, and CI/CD."
+    }
+  ],
+  "resources": [
+    {
+      "href": "/api-reference",
+      "name": "API Reference",
+      "description": "Complete HTTP API reference for creating, retrieving, and managing ephemeral secrets."
+    },
+    {
+      "href": "/cli",
+      "name": "CLI Reference",
+      "description": "All 9 CLI commands for pushing, pulling, and managing secrets from the terminal."
+    },
+    {
+      "href": "/mcp",
+      "name": "MCP Server",
+      "description": "Connect Sirr to Claude Code for AI-native secret management."
+    },
+    {
+      "href": "/sdks",
+      "name": "SDKs",
+      "description": "Official client libraries for Node.js, Python, and .NET."
+    }
+  ],
+  "libraries": [
+    {
+      "name": "Node.js",
+      "description": "@sirrlock/node — TypeScript client with zero dependencies. Native fetch.",
+      "href": "https://github.com/sirrlock/node"
+    },
+    {
+      "name": "Python",
+      "description": "sirr — Sync and async client built on httpx.",
+      "href": "https://github.com/sirrlock/python"
+    },
+    {
+      "name": ".NET",
+      "description": "Sirr.Client — Async-first client built on HttpClient.",
+      "href": "https://github.com/sirrlock/dotnet"
+    },
+    {
+      "name": "Rust CLI",
+      "description": "The sirr binary doubles as a full-featured CLI client.",
+      "href": "https://github.com/sirrlock/sirr"
+    }
+  ],
+  "blog": {
+    "title": "Blog",
+    "subtitle": "What we shipped this week. New features, improvements, and the occasional war story.",
+    "posts": [
+      {
+        "date": "2026-03-05T00:00Z",
+        "title": "The landing page finally looks like something we'd ship",
+        "body": "The old landing page was fine. Clean, readable, got the point across. But 'fine' isn't really the aesthetic we're going for when the product is a cryptographic secret vault. So we rebuilt it: dark teal background, a terminal hero section that actually shows you what sirr looks like in the wild, and a color system that doesn't need to be manually kept in sync. The whole site now reads 'this was designed' rather than 'this was assembled.' Small thing, probably, but first impressions compound.",
+        "highlights": [
+          "New landing page with dark teal theme and terminal hero section",
+          "Full color tokenization — every hue now lives in one place",
+          "Use-case cards link to the right quickstart for your workflow",
+          "Content width consistent across landing page and docs"
+        ]
+      },
+      {
+        "date": "2026-03-04T00:00Z",
+        "title": "Three quickstarts walk into a bar",
+        "body": "We had one quickstart page. It tried to serve the solo developer who just wants to test a secret locally, the DevOps engineer who needs patchable secrets in CI, and the platform team managing secrets across ten microservices — all at once. Predictably, it served none of them well. Today we split it into three: Solo Dev (you and your local sirrd), DevOps (patchable secrets, CI integration, the works), and Multi-Team (namespaced secrets with an audit trail). The main quickstart page is now a three-card hub that routes you to the right place in about three seconds. We also fixed some embarrassing config docs — turns out SIRR_MASTER_KEY had the wrong description, Python required 3.10+ not 3.8, and a handful of env var defaults were just wrong.",
+        "highlights": [
+          "Quickstart split into three persona pages: Solo Dev, DevOps, Multi-Team",
+          "Solo Dev guide: install locally, push a secret, connect MCP",
+          "DevOps guide: patchable secrets with TTL updates and CI pipeline examples",
+          "Multi-Team guide: namespaced secrets with audit log queries",
+          "Fixed SIRR_MASTER_KEY description and corrected SDK version requirements"
+        ]
+      },
+      {
+        "date": "2026-03-03T00:00Z",
+        "title": "One server, many tenants",
+        "body": "Multi-tenancy landed across the entire Sirr stack today. Previously, a Sirr instance was a single flat namespace — great for solo use, awkward the moment you needed to separate production secrets from staging, or team A's keys from team B's. Now every secret belongs to a tenant, every API key is scoped to a tenant, and the audit log shows you exactly who did what and where. We documented the whole thing end-to-end: API changes, CLI flags, SDK updates, MCP tool parameters, the n8n and OpenClaw integration pages, and the architecture diagram that explains how tenants fit into the request path. It was a big docs day.",
+        "highlights": [
+          "Multi-tenant support documented across API, CLI, all SDKs, and MCP",
+          "Tenant-scoped API keys with per-tenant permission isolation",
+          "Updated architecture page with tenant request flow diagram",
+          "n8n and OpenClaw integration docs updated for multi-tenant usage",
+          "Licensing page updated to reflect per-tenant secret limits"
+        ]
+      },
+      {
+        "date": "2026-03-02T00:00Z",
+        "title": "We have a real name now",
+        "body": "The project started as SecretDrop, then lived at sirrvault.com for a while. Today we completed the move to sirrlock.com — new org on GitHub, new Docker registry paths, new Homebrew formula names, new everything. If you bookmarked anything under the old names, the redirects are in place, but update your references when you get a chance. On the actual-features side: we shipped dedicated integration pages for n8n and OpenClaw, so if you're using Sirr as a secret step in a workflow automation or an AI agent pipeline, there's now a proper guide for that. We also added OpenGraph images so links to sirr.dev actually look like something when you paste them into Slack.",
+        "highlights": [
+          "Full rebrand from SirrVault/sirrvault to sirrlock across all docs and install paths",
+          "New n8n integration page — use Sirr as a secret storage step in workflows",
+          "New OpenClaw integration page — AI agent pipelines with burn-after-read secrets",
+          "OpenGraph images for all pages — links now preview properly in Slack and Discord",
+          "GitHub org, GHCR registry, Homebrew tap, and Scoop bucket all updated"
+        ]
+      },
+      {
+        "date": "2026-03-01T00:00Z",
+        "title": "One command to install everything",
+        "body": "Installing sirrd used to mean hunting through GitHub releases, picking the right binary for your OS, and hoping you remembered to add it to your PATH. Today we shipped get.sirr.dev — a single curl-pipe installer that detects your platform, downloads the right binary, and drops it in the right place. Homebrew, Scoop, Docker, and the curl script are all documented on the new Install page. Whatever your setup, there's now a clean one-liner for it.",
+        "highlights": [
+          "New Install page at sirr.dev/install covering all distribution channels",
+          "curl https://get.sirr.dev | sh — detects Linux/macOS, installs sirrd + sirr",
+          "Homebrew tap: brew install sirrlock/tap/sirrd sirrlock/tap/sirr",
+          "Scoop bucket for Windows: scoop install sirrlock/sirrd sirrlock/sirr",
+          "Docker: ghcr.io/sirrlock/sirrd for container deployments"
+        ]
+      },
+      {
+        "date": "2026-02-28T00:00Z",
+        "title": "Two binaries, one purpose, a lot of documentation",
+        "body": "This was a big docs day. We finished formalizing the sirrd/sirr split — sirrd is the server daemon (think: mongod, dockerd), sirr is the client CLI. They're separate binaries, separate installs, separate jobs. With that naming locked in, we rewrote the entire MCP page from scratch: 13 tools documented with working examples, error anchors for every failure mode, and burn-after-read demos in the AI workflows section. We also flipped the default port from 8080 to 39999 site-wide, which was not a small find-and-replace.",
+        "highlights": [
+          "sirrd vs sirr naming fully documented across all pages",
+          "Full MCP page: 13 tools with conversation examples and error codes",
+          "Burn-after-read pattern demonstrated in AI workflow examples",
+          "Default port changed from 8080 to 39999 throughout all docs",
+          "GHCR and Docker Hub image availability documented on deployment pages"
+        ]
+      },
+      {
+        "date": "2026-02-27T00:00Z",
+        "title": "Speak any language (almost)",
+        "body": "Sirr now supports 10 languages across both the docs and the dashboard. We added cookie-based locale detection, a language switcher, and RTL support for Arabic. The docs site picks up your browser language automatically — or you can override it anytime. We also shipped full documentation for audit logs, webhooks, and scoped API keys with code examples in every SDK.",
+        "highlights": [
+          "10-language i18n with automatic browser detection",
+          "New docs pages: Audit Logs, Webhooks, and API Keys",
+          "SDK examples for audit queries, webhook management, and key creation",
+          "Updated CLI reference with sirr audit and sirr keys commands"
+        ]
+      },
+      {
+        "date": "2026-02-24T00:00Z",
+        "title": "Webhooks, audit trails, and keeping an eye on things",
+        "body": "Big day for visibility. The Sirr server now fires webhooks on every secret lifecycle event — created, read, expired, burned. Hook them up to Slack, PagerDuty, or your own automation. We also added a full audit log endpoint so you can trace exactly who accessed what and when. And for teams running multiple Sirr instances, the new instance heartbeat dashboard shows you which servers are online and when they last checked in.",
+        "highlights": [
+          "Webhook notifications for secret.created, secret.read, secret.expired, secret.burned",
+          "Append-only audit log with filterable queries",
+          "Online license validation with configurable cache",
+          "Instance heartbeat dashboard with status indicators"
+        ]
+      },
+      {
+        "date": "2026-02-23T00:00Z",
+        "title": "Secrets got a lot harder to steal",
+        "body": "We shipped a major encryption upgrade. Every secret is now encrypted at rest with a server-generated key, and we added support for key rotation so you can cycle your encryption keys without downtime. The auth system also got an overhaul — you can now use scoped API keys with granular permissions instead of sharing the master key everywhere. Your CI pipeline can have read-only access to just the secrets it needs.",
+        "highlights": [
+          "Encryption-at-rest with server-generated keys",
+          "Key rotation support for zero-downtime secret re-encryption",
+          "Scoped API keys with read/write/delete/admin permissions",
+          "PATCH endpoint to update TTL and read limits on existing secrets",
+          "HEAD endpoint for checking secret existence without incrementing reads"
+        ]
+      },
+      {
+        "date": "2026-02-22T00:00Z",
+        "title": "Ship it (for real this time)",
+        "body": "We spent the day getting the deployment pipeline right. Both the docs site and the dashboard now build as Docker images, ship to GHCR, and deploy automatically. Every build gets a traceable version number baked in — hit /api/version on either site and you'll see exactly which commit is running. Not glamorous work, but now we can ship multiple times a day without thinking about it.",
+        "highlights": [
+          "Automated Docker builds with multi-stage optimization",
+          "GHCR publishing with automatic public visibility",
+          "/api/version endpoint on every service for build traceability",
+          "One-command deploys to production"
+        ]
+      },
+      {
+        "date": "2026-02-21T00:00Z",
+        "title": "Day one — everything from scratch",
+        "body": "We built the entire Sirr ecosystem in a single day. The Rust server went from first commit to full encryption, the Node.js SDK shipped, the MCP server for AI integration got wired up, and both the docs site and the SaaS dashboard went live. Also made it work on Docker with multi-arch support because nobody wants to think about whether their server is running on AMD or ARM.",
+        "highlights": [
+          "Sirr server: ChaCha20Poly1305 encryption, redb storage, full REST API",
+          "Node.js SDK with zero dependencies and native fetch",
+          "MCP server for Claude Code integration",
+          "Complete documentation site with 14 pages",
+          "SaaS dashboard with authentication and license management",
+          "Docker images for both amd64 and arm64"
+        ]
+      }
+    ]
+  }
+}

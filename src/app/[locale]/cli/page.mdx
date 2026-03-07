@@ -1,0 +1,632 @@
+export const metadata = {
+  title: 'CLI Reference',
+  description:
+    'Complete reference for every Sirr CLI command — push, get, pull, run, list, delete, prune, share, audit, and keys.',
+}
+
+export const sections = [
+  { title: 'sirr push', id: 'sirr-push' },
+  { title: 'sirr get', id: 'sirr-get' },
+  { title: 'sirr pull', id: 'sirr-pull' },
+  { title: 'sirr run', id: 'sirr-run' },
+  { title: 'sirr list', id: 'sirr-list' },
+  { title: 'sirr delete', id: 'sirr-delete' },
+  { title: 'sirr prune', id: 'sirr-prune' },
+  { title: 'sirr share', id: 'sirr-share' },
+  { title: 'sirr audit', id: 'sirr-audit' },
+  { title: 'sirr keys', id: 'sirr-keys' },
+  { title: 'sirr orgs', id: 'sirr-orgs' },
+  { title: 'sirr principals', id: 'sirr-principals' },
+  { title: 'sirr roles', id: 'sirr-roles' },
+  { title: 'sirr me', id: 'sirr-me' },
+  { title: 'TTL format', id: 'ttl-format' },
+]
+
+# CLI Reference
+
+The `sirr` CLI is a single binary for interacting with a `sirrd` server. It talks over HTTP using a bearer token for authentication. {{ className: 'lead' }}
+
+<Note>
+  To run the server, install [`sirrd`](/self-hosting) — the Sirr daemon. The `sirr` CLI is the client only.
+</Note>
+
+Configure the CLI with two environment variables:
+
+- `SIRR_SERVER` -- the URL of your Sirr instance (default `sirr://localhost:39999`). Use `sirr://` for HTTP or `sirrs://` for HTTPS.
+- `SIRR_TOKEN` -- the bearer token matching the server's `SIRR_MASTER_KEY`
+
+```bash {{ title: 'Environment setup' }}
+export SIRR_SERVER="sirr://localhost:39999"
+export SIRR_TOKEN="your-master-key"
+```
+
+---
+
+## sirr push
+
+Push a secret to the server. Accepts a single `KEY=VALUE` pair or an entire `.env` file for batch upload.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr push KEY=VALUE [options]
+    sirr push .env [options]
+    ```
+
+    <Properties>
+      <Property name="--ttl" type="duration">
+        Time-to-live before the secret self-destructs. See [TTL format](#ttl-format) below.
+      </Property>
+      <Property name="--reads" type="number">
+        Maximum number of reads before the secret is burned. Once the limit is reached, the secret is permanently destroyed.
+      </Property>
+      <Property name="--org" type="string">
+        Organization ID for multi-tenant mode. Pushes the secret into the org's scope. Can also be set via `SIRR_ORG`.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Single secret' }}
+    sirr push DB_URL="postgres://user:pass@db:5432/app" \
+      --ttl 1h \
+      --reads 1
+    ```
+
+    ```bash {{ title: 'Batch push from .env file' }}
+    # Pushes every key-value pair in the file
+    sirr push .env --ttl 24h
+    ```
+
+  </Col>
+</Row>
+
+<Note>
+  When pushing a `.env` file, each line is stored as a separate secret on the server. All secrets inherit the same `--ttl` and `--reads` options.
+</Note>
+
+---
+
+## sirr get
+
+Retrieve and print a secret value. Each call increments the read counter. If the read limit is reached, the secret is burned immediately after being returned.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr get KEY [--org ORG]
+    ```
+
+    The value is printed to stdout with no trailing newline, making it safe to use in shell pipelines and variable assignments. Pass `--org` to retrieve from an org scope.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    sirr get DB_URL
+    # postgres://user:pass@db:5432/app
+
+    # Capture into a variable
+    export DB_URL="$(sirr get DB_URL)"
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr pull
+
+Pull all secrets from the server and write them to a `.env` file. If the file already exists, it is overwritten.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr pull .env [--org ORG]
+    ```
+
+    This is the inverse of `sirr push .env`. Use it to sync secrets to a new machine or restore a development environment. Pass `--org` to pull from an org scope.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    # On machine A
+    sirr push .env --ttl 24h
+
+    # On machine B
+    sirr pull .env
+    cat .env
+    # DB_URL=postgres://user:pass@db:5432/app
+    # API_KEY=sk-live-abc123
+    ```
+
+  </Col>
+</Row>
+
+<Note>
+  `sirr pull` reads every secret, so read counters will increment. If any secret has a read limit of 1, pulling will consume that read.
+</Note>
+
+---
+
+## sirr run
+
+Inject all secrets from the server as environment variables and execute a command. The secrets are never written to disk -- they exist only in the child process's environment.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr run [--org ORG] -- <command> [args...]
+    ```
+
+    The double dash `--` separates Sirr's arguments from the command to run. Everything after `--` is passed to the child process. Pass `--org` to inject secrets from an org scope.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    # Run a Node.js app with all secrets injected
+    sirr run -- node app.js
+
+    # Run a Python script
+    sirr run -- python manage.py runserver
+
+    # Run any command
+    sirr run -- docker compose up
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr list
+
+List all secrets stored on the server. Shows metadata only -- keys, TTL, read counts, and creation timestamps. Secret values are never displayed.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr list [--org ORG]
+    ```
+
+    Pass `--org` to list secrets within an org scope.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example output' }}
+    sirr list
+    # KEY         TTL        READS  CREATED
+    # DB_URL      58m left   0/1    2 min ago
+    # API_KEY     23h left   2/∞    1 hour ago
+    # REDIS_URL   6d left    0/∞    3 hours ago
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr delete
+
+Delete a specific secret immediately, regardless of its TTL or remaining reads.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr delete KEY [--org ORG]
+    ```
+
+    The secret is permanently destroyed from the server. This action cannot be undone. Pass `--org` to delete from an org scope.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    sirr delete DB_URL
+    # Deleted DB_URL
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr prune
+
+Delete all expired secrets from the server. Expired secrets are already unreadable, but pruning reclaims storage and cleans up the key list.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr prune [--org ORG]
+    ```
+
+    Pass `--org` to prune expired secrets within an org scope.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    sirr prune
+    # Pruned 12 expired secrets
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr share
+
+Generate a shareable reference for a secret. The reference can be given to another person or system to retrieve the secret without exposing your master key.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr share KEY [--org ORG]
+    ```
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    sirr share DB_URL
+    # https://your-sirr-server/s/a1b2c3d4e5f6
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr audit
+
+Query the audit log to see who accessed what and when.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr audit [options]
+    ```
+
+    <Properties>
+      <Property name="--action" type="string">
+        Filter by event type (e.g. `secret.read`, `secret.created`).
+      </Property>
+      <Property name="--since" type="duration">
+        Only show events after this duration ago (e.g. `1h`, `7d`).
+      </Property>
+      <Property name="--limit" type="number">
+        Maximum number of entries to show. Defaults to 50.
+      </Property>
+      <Property name="--org" type="string">
+        Organization ID to query org-scoped audit logs.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    # Last 20 read events
+    sirr audit --action secret.read --limit 20
+
+    # All events in the last 24 hours
+    sirr audit --since 24h
+
+    # Example output
+    # TIMESTAMP            ACTION          KEY
+    # 2025-02-27 14:30:00  secret.read     db/password
+    # 2025-02-27 14:28:00  secret.created  db/password
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr keys
+
+Manage scoped API keys for delegated access.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr keys list
+    sirr keys create --name NAME --perms PERMS [--prefix PREFIX]
+    sirr keys remove ID
+    ```
+
+    <Properties>
+      <Property name="--name" type="string">
+        Human-readable label for the key.
+      </Property>
+      <Property name="--perms" type="string">
+        Comma-separated permissions: `read`, `write`, `delete`, `admin`.
+      </Property>
+      <Property name="--prefix" type="string">
+        Optional key prefix restriction (e.g. `ci/`).
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    # List all API keys
+    sirr keys list
+
+    # Create a read-only key for CI
+    sirr keys create --name "CI pipeline" --perms read,write --prefix ci/
+    # → Created key_a1b2c3d4
+    # → Token: sirr_sk_7f3a... (save this — shown only once)
+
+    # Revoke a key
+    sirr keys remove key_a1b2c3d4
+    # → Removed key_a1b2c3d4
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr orgs
+
+Manage organizations. Requires master key authentication.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr orgs list
+    sirr orgs create NAME
+    sirr orgs delete ORG_ID
+    ```
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    # List all organizations
+    sirr orgs list
+    # ID              NAME        CREATED
+    # org_a1b2c3d4    acme-corp   2 days ago
+
+    # Create an organization
+    sirr orgs create acme-corp
+    # Created org_a1b2c3d4
+
+    # Delete an organization (must have no principals)
+    sirr orgs delete org_a1b2c3d4
+    # Deleted org_a1b2c3d4
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr principals
+
+Manage principals within an organization. Requires master key authentication.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr principals list --org ORG
+    sirr principals create --org ORG --name NAME --role ROLE
+    sirr principals delete --org ORG ID
+    ```
+
+    <Properties>
+      <Property name="--org" type="string" required>
+        Organization ID to manage principals in.
+      </Property>
+      <Property name="--name" type="string">
+        Human-readable name for the principal (required for `create`).
+      </Property>
+      <Property name="--role" type="string">
+        Role to assign: `reader`, `writer`, `admin`, `owner`, or a custom role (required for `create`).
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    # List principals in an org
+    sirr principals list --org org_a1b2c3d4
+    # ID              NAME      ROLE     CREATED
+    # prin_e5f6a7b8   ci-bot    writer   1 hour ago
+
+    # Create a principal
+    sirr principals create --org org_a1b2c3d4 \
+      --name ci-bot --role writer
+    # Created prin_e5f6a7b8
+
+    # Delete a principal (must have no active keys)
+    sirr principals delete --org org_a1b2c3d4 prin_e5f6a7b8
+    # Deleted prin_e5f6a7b8
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr roles
+
+Manage roles within an organization. Requires master key authentication.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr roles list --org ORG
+    sirr roles create --org ORG --name NAME --perms PERMS
+    sirr roles delete --org ORG NAME
+    ```
+
+    <Properties>
+      <Property name="--org" type="string" required>
+        Organization ID to manage roles in.
+      </Property>
+      <Property name="--name" type="string">
+        Unique name for the custom role (required for `create`).
+      </Property>
+      <Property name="--perms" type="string">
+        Permission letter string (required for `create`). Example: `rRlL`.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    # List all roles (built-in + custom)
+    sirr roles list --org org_a1b2c3d4
+    # NAME      PERMISSIONS      BUILTIN
+    # reader    rRl              yes
+    # writer    rRlLcCpP         yes
+    # admin     rRlLcCpPaAmM     yes
+    # owner     rRlLcCpPaAmMdD   yes
+    # auditor   rRlL             no
+
+    # Create a custom role
+    sirr roles create --org org_a1b2c3d4 \
+      --name auditor --perms rRlL
+    # Created role auditor
+
+    # Delete a custom role
+    sirr roles delete --org org_a1b2c3d4 auditor
+    # Deleted role auditor
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr me
+
+View and manage your own principal identity and keys. Authenticates with a principal key.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr me info
+    sirr me keys
+    sirr me create-key --name NAME [--valid-after TS] [--valid-before TS]
+    sirr me delete-key KEY_ID
+    ```
+
+    <Properties>
+      <Property name="--name" type="string">
+        Human-readable label for the new key (required for `create-key`).
+      </Property>
+      <Property name="--valid-after" type="integer">
+        Unix timestamp after which the key becomes valid.
+      </Property>
+      <Property name="--valid-before" type="integer">
+        Unix timestamp after which the key expires.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Example' }}
+    # Show current identity
+    sirr me info
+    # Principal: prin_e5f6a7b8 (ci-bot)
+    # Org:       org_a1b2c3d4
+    # Role:      writer
+    # Perms:     rRlLcCpP
+
+    # List your keys
+    sirr me keys
+    # ID              NAME          VALID
+    # key_c9d0e1f2    ci-deploy     active
+    # key_f3a4b5c6    temp-key      expired
+
+    # Create a new key
+    sirr me create-key --name deploy-v2
+    # Created key_g7h8i9j0
+    # Token: sirr_pk_9c4d... (save this — shown only once)
+
+    # Delete a key
+    sirr me delete-key key_f3a4b5c6
+    # Deleted key_f3a4b5c6
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## TTL format
+
+Sirr accepts human-readable duration strings for the `--ttl` flag. Combine a number with a unit suffix.
+
+| Format | Unit    | Example         |
+|--------|---------|-----------------|
+| `30s`  | seconds | 30 seconds      |
+| `5m`   | minutes | 5 minutes       |
+| `2h`   | hours   | 2 hours         |
+| `7d`   | days    | 7 days          |
+| `30d`  | days    | 30 days (max)   |
+
+```bash {{ title: 'TTL examples' }}
+sirr push TOKEN=abc123 --ttl 30s        # Burns in 30 seconds
+sirr push DB_URL=postgres://... --ttl 2h # Burns in 2 hours
+sirr push .env --ttl 7d                  # All secrets burn in 7 days
+```
+
+<Note>
+  If no `--ttl` is specified, the server's default TTL is used. Check your server configuration for the default value.
+</Note>

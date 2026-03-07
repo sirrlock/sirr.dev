@@ -1,0 +1,222 @@
+export const metadata = {
+  title: 'Vault Encryption',
+  description:
+    'Two-tier encryption-at-rest architecture for self-hosted Sirr deployments: AES-256-GCM server-side encryption, optional client-side encryption, master key delivery, key rotation, and backup strategy.',
+}
+
+export const sections = [
+  { title: 'Overview', id: 'overview' },
+  { title: 'Threat model', id: 'threat-model' },
+  { title: 'Two-tier encryption', id: 'two-tier-encryption' },
+  { title: 'Master key delivery', id: 'master-key-delivery' },
+  { title: 'Key rotation', id: 'key-rotation' },
+  { title: 'Backup strategy', id: 'backup-strategy' },
+  { title: 'Implementation checklist', id: 'implementation-checklist' },
+  { title: 'Compliance', id: 'compliance' },
+]
+
+# Vault Encryption
+
+Sirr encrypts all secret values at rest using a two-tier architecture: mandatory server-side encryption with AES-256-GCM, and optional client-side encryption where the server never sees plaintext. This page documents the full encryption lifecycle for self-hosted deployments. {{ className: 'lead' }}
+
+## Overview {{ id: 'overview' }}
+
+Every secrets manager faces the same bootstrap problem: someone has to provide the first key. HashiCorp Vault uses an "unseal" ceremony. AWS KMS relies on hardware security modules. Sirr uses a mounted key file with strict host-level permissions — a pragmatic and secure solution for a self-hosted service.
+
+The core principle: **the encrypted database and the master key must never live in the same place.**
+
+---
+
+## Threat model {{ id: 'threat-model' }}
+
+The encryption architecture protects against four scenarios:
+
+| Threat | Description |
+| --- | --- |
+| **Database file exfiltration** | An attacker obtains the SQLite file from disk or from a backup. Without encryption at rest, all stored secrets are immediately compromised. |
+| **Container compromise** | An attacker gains shell access to the running container. Environment variables and files inside the container are exposed. |
+| **Host-level compromise** | An attacker gains access to the Docker host. Docker inspect, mounted volumes, and container memory become accessible. |
+| **Backup theft** | Database backups stored offsite are intercepted or leaked. |
+
+---
+
+## Two-tier encryption {{ id: 'two-tier-encryption' }}
+
+### Tier 1 — Server-side encryption (mandatory)
+
+All data stored in the database is encrypted at rest using AES-256-GCM. The master key is derived at server startup and held only in memory.
+
+- The server reads a mounted key file once at startup, derives the encryption key in memory, and the key file can optionally be unmounted afterward.
+- The derived key is never written to disk.
+- Each encrypted record includes a key version identifier to support graceful rotation.
+
+```yaml {{ title: 'Docker Compose — key file mount' }}
+services:
+  sirrd:
+    image: ghcr.io/sirrlock/sirrd:latest
+    volumes:
+      - ./master.key:/run/secrets/master.key:ro
+    environment:
+      SIRR_KEY_FILE: /run/secrets/master.key
+```
+
+<Note>
+  **Never** pass the master key as an environment variable. Environment variables are visible via `docker inspect`, `/proc`, and orchestrator logs. **Never** bake the key into the Docker image — it is extractable from image layers.
+</Note>
+
+### Tier 2 — Client-side encryption (optional, recommended)
+
+Users may encrypt their secrets client-side before submitting them to the API. In this mode, the server stores an opaque encrypted blob and cannot decrypt user data — only the user holds the key.
+
+- Recommended for high-sensitivity secrets (production database credentials, root API keys, signing keys).
+- Users who opt out of client-side encryption are still protected by Tier 1.
+
+```bash {{ title: 'Client-side encryption with the CLI' }}
+# Encrypt locally before pushing
+sirr push db/prod --value "$(echo 'pg://user:pass@host/db' | age -r age1...)" --ttl 1h
+
+# Decrypt after pulling
+sirr pull db/prod | age -d -i key.txt
+```
+
+<Note>
+  Make the trade-off explicit: Tier 1 protects against database exfiltration. Tier 2 protects against a fully compromised server. Users who skip client-side encryption accept that a compromised server process can read their secrets.
+</Note>
+
+---
+
+## Master key delivery {{ id: 'master-key-delivery' }}
+
+The master key must be delivered to the server at startup. These are the approved methods, ranked by security:
+
+| Priority | Method | Security | Notes |
+| --- | --- | --- | --- |
+| 1 | **Mounted key file** (host volume) | High | Key file on host with `0400` permissions, owned by root. Mount read-only into container. |
+| 2 | **Docker Secrets** (Swarm mode) | High | Mounted at `/run/secrets/`, stored encrypted in Swarm's Raft log. |
+| 3 | **External KMS call at startup** | Highest | Server fetches key from an external KMS at boot. Adds an external dependency. |
+| 4 | Environment variable | Low | **Not recommended.** Visible via `docker inspect`, `/proc`, and orchestrator logs. Use only in local development. |
+| 5 | Build-time generation | None | **Prohibited.** Key is extractable from image layers. |
+
+### Mounted key file setup
+
+```bash {{ title: 'Generate and secure the master key' }}
+# Generate a 256-bit key
+openssl rand -base64 32 > /etc/sirr/master.key
+
+# Lock down permissions
+chmod 0400 /etc/sirr/master.key
+chown root:root /etc/sirr/master.key
+```
+
+The server is fail-closed: it refuses to start without a valid key file.
+
+### Docker Secrets (Swarm)
+
+```yaml {{ title: 'Docker Compose with Swarm secrets' }}
+services:
+  sirrd:
+    image: ghcr.io/sirrlock/sirrd:latest
+    secrets:
+      - master_key
+    environment:
+      SIRR_KEY_FILE: /run/secrets/master_key
+
+secrets:
+  master_key:
+    file: ./master.key
+```
+
+---
+
+## Key rotation {{ id: 'key-rotation' }}
+
+Key rotation replaces the master encryption key without downtime or data loss. Sirr stores a key version identifier alongside each encrypted record to support graceful rotation.
+
+### Rotation procedure
+
+1. **Generate** a new master key.
+2. **Start** the server with both old and new keys (dual-key mode).
+3. **Re-encrypt** all records with the new key. The server processes records in batches, reading with the old key and writing with the new key.
+4. **Remove** the old key from the key file.
+5. **Restart** the server with only the new key.
+
+```bash {{ title: 'Key rotation example' }}
+# 1. Generate a new key
+openssl rand -base64 32 > /etc/sirr/master.key.new
+
+# 2. Start with dual keys
+export SIRR_KEY_FILE=/etc/sirr/master.key
+export SIRR_KEY_FILE_NEW=/etc/sirr/master.key.new
+
+# 3. Trigger re-encryption (admin endpoint)
+curl -X POST http://localhost:39999/admin/rotate-keys \
+  -H "Authorization: Bearer $SIRR_ADMIN_TOKEN"
+
+# 4. Swap keys
+mv /etc/sirr/master.key.new /etc/sirr/master.key
+
+# 5. Restart with single key
+```
+
+<Note>
+  The rotation endpoint is admin-only and requires authentication. Audit logs record every key rotation event.
+</Note>
+
+---
+
+## Backup strategy {{ id: 'backup-strategy' }}
+
+Database backups are encrypted by nature — the data at rest is AES-256-GCM encrypted. However, the master key requires separate, careful handling.
+
+### Rules
+
+- The master key file **must** be backed up separately from the database.
+- Store key backups in a physically or logically separate location from database backups.
+- **If the master key is lost and no backup exists, all data is irrecoverable by design.**
+
+### Shamir's Secret Sharing
+
+For high-security deployments, split the master key backup across multiple trusted parties using Shamir's Secret Sharing:
+
+```bash {{ title: 'Split the master key into 5 shares (3 required to reconstruct)' }}
+# Using the `ssss-split` tool
+ssss-split -t 3 -n 5 < /etc/sirr/master.key
+
+# Distribute shares to separate custodians
+# Any 3 of 5 shares can reconstruct the key:
+ssss-combine -t 3
+```
+
+This ensures no single person can reconstruct the master key alone.
+
+---
+
+## Implementation checklist {{ id: 'implementation-checklist' }}
+
+The following items track the server-side implementation of this encryption architecture:
+
+- [x] AES-256-GCM encryption using `aes-gcm` or `ring` crate in Rust
+- [x] Key file reader at startup (fail-closed: server refuses to start without valid key)
+- [x] Key version field in encrypted records schema
+- [ ] Key rotation endpoint (admin-only, authenticated)
+- [ ] Client-side encryption SDK documentation for API consumers
+- [x] Docker Compose with read-only volume mount for key file
+- [ ] Separate, secure backup tooling for master key material
+- [x] Audit logging for all secret access operations
+- [x] Load-tested to verify encryption overhead is acceptable
+
+---
+
+## Compliance {{ id: 'compliance' }}
+
+This encryption architecture satisfies common requirements for:
+
+| Standard | Requirement |
+| --- | --- |
+| **GDPR Art. 32** | Encryption of personal data at rest |
+| **SOC 2 Type II** | Logical access controls and encryption |
+| **ISO 27001 A.10** | Cryptographic controls |
+
+<Note>
+  Ensure audit logging is enabled for all CRUD operations on secrets to satisfy access trail requirements. See the [Security](/security) page for details on Sirr's audit logging implementation.
+</Note>

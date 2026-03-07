@@ -1,0 +1,211 @@
+{
+  "meta": {
+    "siteTitle": "Sirr",
+    "siteTitleTemplate": "%s - Documentation Sirr",
+    "siteDescription": "Documentation de Sirr — le coffre-fort de secrets éphémères conçu pour l'ère de l'IA.",
+    "pages": {
+      "/": {
+        "title": "Documentation Sirr",
+        "description": "Documentation de Sirr — le coffre-fort de secrets éphémères conçu pour l'ère de l'IA. Envoyez des secrets avec TTL et limites de lecture."
+      },
+      "/quickstart": {
+        "title": "Démarrage rapide",
+        "description": "Démarrez avec Sirr en quelques minutes. Installez, configurez et envoyez votre premier secret éphémère."
+      },
+      "/architecture": {
+        "title": "Architecture",
+        "description": "Comment Sirr chiffre, stocke et fait expirer les secrets avec ChaCha20Poly1305, Argon2id et redb."
+      },
+      "/configuration": {
+        "title": "Configuration",
+        "description": "Toutes les variables d'environnement et options de configuration du serveur Sirr et des clients CLI."
+      },
+      "/authentication": {
+        "title": "Authentification",
+        "description": "Comment s'authentifier auprès de l'API Sirr à l'aide de jetons Bearer."
+      },
+      "/errors": {
+        "title": "Erreurs",
+        "description": "Codes d'état HTTP, format de réponse d'erreur et dépannage de l'API Sirr."
+      },
+      "/sdks": {
+        "title": "SDKs",
+        "description": "Bibliothèques clientes officielles Sirr pour Node.js, Python et .NET."
+      },
+      "/api-reference": {
+        "title": "Référence API",
+        "description": "Référence complète de l'API HTTP pour les 6 endpoints du serveur Sirr."
+      },
+      "/audit-logs": {
+        "title": "Journaux d'audit",
+        "description": "Interrogez le journal d'audit immuable des opérations sur les secrets."
+      },
+      "/webhooks": {
+        "title": "Webhooks",
+        "description": "Enregistrez des endpoints HTTP pour recevoir des notifications d'événements en temps réel de Sirr."
+      },
+      "/api-keys": {
+        "title": "Clés API",
+        "description": "Créez des clés API avec des permissions granulaires et des restrictions de préfixe."
+      },
+      "/deployment": {
+        "title": "Déploiement",
+        "description": "Déployez Sirr avec Docker, Homebrew, téléchargement de binaire ou compilation depuis les sources."
+      },
+      "/self-hosting": {
+        "title": "Auto-hébergement",
+        "description": "Guide de déploiement en production avec proxy inverse, TLS, sauvegardes et surveillance."
+      },
+      "/security": {
+        "title": "Sécurité",
+        "description": "Modèle de menace de Sirr, détails du chiffrement et principes de conception zéro confiance."
+      },
+      "/vault-encryption": {
+        "title": "Chiffrement du Vault",
+        "description": "Architecture de chiffrement au repos à deux niveaux : chiffrement côté serveur AES-256-GCM, chiffrement côté client, livraison des clés, rotation et sauvegardes."
+      },
+      "/licensing": {
+        "title": "Licences",
+        "description": "Détails de la licence BSL 1.1, limites du niveau gratuit et licences commerciales pour Sirr."
+      },
+      "/cli": {
+        "title": "Référence CLI",
+        "description": "Référence complète des 9 commandes CLI de Sirr avec exemples."
+      },
+      "/mcp": {
+        "title": "Serveur MCP",
+        "description": "Configurez le serveur MCP de Sirr pour l'intégration avec Claude Code AI."
+      },
+      "/ai-workflows": {
+        "title": "Workflows IA",
+        "description": "Modèles d'utilisation de Sirr avec des agents IA, des pipelines CI/CD et des workflows d'équipe."
+      },
+      "/blog": {
+        "title": "Blog",
+        "description": "Ce que nous avons livré cette semaine — mises à jour du progrès de l'équipe Sirr."
+      }
+    }
+  },
+  "nav": {
+    "groups": {
+      "guides": "Guides",
+      "server": "Serveur",
+      "tools": "Outils"
+    },
+    "links": {
+      "introduction": "Introduction",
+      "quickstart": "Démarrage rapide",
+      "quickstartSoloDev": "Solo Dev",
+      "quickstartDevops": "DevOps",
+      "quickstartMultiTeam": "Multi-Team",
+      "architecture": "Architecture",
+      "configuration": "Configuration",
+      "authentication": "Authentification",
+      "errors": "Erreurs",
+      "sdks": "SDKs",
+      "apiReference": "Référence API",
+      "auditLogs": "Journaux d'audit",
+      "webhooks": "Webhooks",
+      "apiKeys": "Clés API",
+      "deployment": "Déploiement",
+      "selfHosting": "Auto-hébergement",
+      "security": "Sécurité",
+      "vaultEncryption": "Chiffrement du Vault",
+      "licensing": "Licences",
+      "cli": "Référence CLI",
+      "mcp": "Serveur MCP",
+      "n8n": "n8n Integration",
+      "openclaw": "OpenClaw Integration",
+      "aiWorkflows": "Workflows IA",
+      "blog": "Blog"
+    },
+    "topLevel": {
+      "docs": "Documentation",
+      "github": "GitHub"
+    }
+  },
+  "common": {
+    "readMore": "En savoir plus",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "copyright": "Copyright {year}. Tous droits réservés.",
+    "getStarted": "Commencer",
+    "exploreSDKs": "Explorer les SDKs",
+    "officialLibraries": "Bibliothèques officielles",
+    "followOnX": "Suivez-nous sur X",
+    "followOnGithub": "Suivez-nous sur GitHub",
+    "joinDiscord": "Rejoignez notre serveur Discord"
+  },
+  "home": {
+    "heroTitle": "Documentation Sirr",
+    "heroLead": "Le gestionnaire de secrets conçu pour l'ère de l'IA. Chaque secret expire. Par conception. Envoyez des secrets avec TTL et limites de lecture — une fois les conditions remplies, le secret disparaît.",
+    "gettingStarted": "Premiers pas",
+    "gettingStartedLead": "Installez Sirr en tant que binaire unique ou conteneur Docker, configurez votre clé maître et commencez à envoyer des secrets éphémères en quelques minutes."
+  },
+  "guides": [
+    {
+      "href": "/quickstart",
+      "name": "Démarrage rapide",
+      "description": "Installez Sirr et envoyez votre premier secret en moins de deux minutes."
+    },
+    {
+      "href": "/architecture",
+      "name": "Architecture",
+      "description": "Comprenez comment Sirr chiffre, stocke et fait expirer les secrets."
+    },
+    {
+      "href": "/security",
+      "name": "Sécurité",
+      "description": "Modèle de menace, détails du chiffrement et conception zéro confiance."
+    },
+    {
+      "href": "/ai-workflows",
+      "name": "Workflows IA",
+      "description": "Modèles d'utilisation de Sirr avec Claude, LangChain et CI/CD."
+    }
+  ],
+  "resources": [
+    {
+      "href": "/api-reference",
+      "name": "Référence API",
+      "description": "Référence complète de l'API HTTP pour créer, récupérer et gérer des secrets éphémères."
+    },
+    {
+      "href": "/cli",
+      "name": "Référence CLI",
+      "description": "Les 9 commandes CLI pour envoyer, récupérer et gérer des secrets depuis le terminal."
+    },
+    {
+      "href": "/mcp",
+      "name": "Serveur MCP",
+      "description": "Connectez Sirr à Claude Code pour une gestion de secrets native IA."
+    },
+    {
+      "href": "/sdks",
+      "name": "SDKs",
+      "description": "Bibliothèques clientes officielles pour Node.js, Python et .NET."
+    }
+  ],
+  "libraries": [
+    {
+      "name": "Node.js",
+      "description": "@sirrlock/node — Client TypeScript sans dépendances. Fetch natif.",
+      "href": "https://github.com/sirrlock/node"
+    },
+    {
+      "name": "Python",
+      "description": "sirr — Client synchrone et asynchrone basé sur httpx.",
+      "href": "https://github.com/sirrlock/python"
+    },
+    {
+      "name": ".NET",
+      "description": "Sirr.Client — Client async-first basé sur HttpClient.",
+      "href": "https://github.com/sirrlock/dotnet"
+    },
+    {
+      "name": "Rust CLI",
+      "description": "Le binaire sirr fait également office de client CLI complet.",
+      "href": "https://github.com/sirrlock/sirr"
+    }
+  ]
+}

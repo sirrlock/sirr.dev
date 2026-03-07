@@ -1,0 +1,494 @@
+export const metadata = {
+  title: 'MCP Server',
+  description:
+    'Integrate Sirr with AI assistants like Claude using the Model Context Protocol. Read and write secrets directly from conversations.',
+}
+
+export const sections = [
+  { title: 'What is MCP', id: 'what-is-mcp' },
+  { title: 'Installation', id: 'installation' },
+  { title: 'Configuration', id: 'configuration' },
+  { title: 'Multi-tenant configuration', id: 'multi-tenant-configuration' },
+  { title: 'Available tools', id: 'available-tools' },
+  { title: 'Conversation examples', id: 'conversation-examples' },
+  { title: 'Troubleshooting', id: 'troubleshooting' },
+]
+
+# MCP Server
+
+Give AI assistants direct access to your secrets vault. Sirr's MCP server lets tools like Claude push, read, and manage ephemeral secrets without leaving the conversation. {{ className: 'lead' }}
+
+---
+
+## What is MCP
+
+The Model Context Protocol (MCP) is an open standard that allows AI assistants to interact with external tools and data sources. Instead of copy-pasting secrets between your terminal and an AI chat, MCP lets the assistant call Sirr directly.
+
+Sirr's MCP server exposes a suite of tools that map to the core Sirr operations. When an AI assistant reads a secret through MCP, the same rules apply — read counters increment, TTLs are enforced, and one-time secrets burn after a single read.
+
+<Note>
+  MCP does not bypass any security constraints. Every tool call goes through the same authenticated HTTP API with the same TTL and read-limit enforcement.
+</Note>
+
+---
+
+## Installation
+
+Install the MCP server globally via npm.
+
+```bash {{ title: 'Install' }}
+npm install -g @sirrlock/mcp
+```
+
+After installation, the `sirr-mcp` binary is available on your `PATH`.
+
+---
+
+## Configuration
+
+Add Sirr to your MCP configuration file. Most AI tools look for `.mcp.json` in your project root or home directory.
+
+```json {{ title: '.mcp.json' }}
+{
+  "mcpServers": {
+    "sirr": {
+      "command": "sirr-mcp",
+      "env": {
+        "SIRR_SERVER": "http://localhost:39999",
+        "SIRR_TOKEN": "your-token"
+      }
+    }
+  }
+}
+```
+
+<Row>
+  <Col>
+
+    ### Environment variables
+
+    <Properties>
+      <Property name="SIRR_SERVER" type="string">
+        URL of the Sirr server. Defaults to `http://localhost:39999`.
+      </Property>
+      <Property name="SIRR_TOKEN" type="string">
+        Bearer token for authentication. Must match the server's `SIRR_MASTER_KEY` exactly.
+      </Property>
+    </Properties>
+
+    ### CLI flags
+
+    <Properties>
+      <Property name="--version">
+        Print the installed `sirr-mcp` version and exit.
+      </Property>
+      <Property name="--health">
+        Check that the MCP server can reach Sirr and exit with code `0` on success or `1` on failure. Safe to use in scripts and CI.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Verify the MCP server' }}
+    # Test that the MCP server can reach Sirr
+    SIRR_SERVER=http://localhost:39999 \
+    SIRR_TOKEN=your-token \
+    sirr-mcp --health
+    ```
+
+    ```bash {{ title: 'Print installed version' }}
+    sirr-mcp --version
+    # sirr-mcp 0.1.0
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Multi-tenant configuration
+
+To use the MCP server with org-scoped secrets, add the `SIRR_ORG` environment variable. When set, all secret operations are scoped to that organization and the token must be a principal key (not the master key).
+
+```json {{ title: '.mcp.json with multi-tenant' }}
+{
+  "mcpServers": {
+    "sirr": {
+      "command": "sirr-mcp",
+      "env": {
+        "SIRR_SERVER": "http://localhost:39999",
+        "SIRR_TOKEN": "your-principal-key",
+        "SIRR_ORG": "your-org-id"
+      }
+    }
+  }
+}
+```
+
+<Row>
+  <Col>
+
+    ### Additional environment variable
+
+    <Properties>
+      <Property name="SIRR_ORG" type="string">
+        Organization ID for multi-tenant mode. When set, all secret, audit, and webhook operations are scoped to this org. The token must be a principal key with appropriate permissions.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Verify multi-tenant config' }}
+    SIRR_SERVER=http://localhost:39999 \
+    SIRR_TOKEN=your-principal-key \
+    SIRR_ORG=your-org-id \
+    sirr-mcp --health
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Available tools
+
+The MCP server exposes sixteen tools across five groups.
+
+### Secrets
+
+<Row>
+  <Col>
+
+    ### push_secret
+
+    Push a secret to the vault.
+
+    <Properties>
+      <Property name="key" type="string" required>
+        The secret key name.
+      </Property>
+      <Property name="value" type="string" required>
+        The secret value.
+      </Property>
+      <Property name="ttl_seconds" type="number">
+        Time-to-live in seconds. Optional.
+      </Property>
+      <Property name="max_reads" type="number">
+        Maximum read count before the secret is burned. Optional.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ### get_secret
+
+    Retrieve a secret value. Increments the read counter; burns the secret if `max_reads` is reached.
+
+    <Properties>
+      <Property name="key" type="string" required>
+        The secret key to retrieve. Accepts bare names, `sirr:KEYNAME`, or `KEYNAME#id` format.
+      </Property>
+    </Properties>
+
+    ### delete_secret
+
+    Delete a secret immediately, regardless of TTL or read count.
+
+    <Properties>
+      <Property name="key" type="string" required>
+        The secret key to delete.
+      </Property>
+    </Properties>
+
+  </Col>
+</Row>
+
+<Row>
+  <Col>
+
+    ### list_secrets
+
+    List all secret metadata. Returns keys, TTLs, and read counts. No values are returned.
+
+    _No parameters._
+
+  </Col>
+  <Col>
+
+    ### prune_secrets
+
+    Delete all expired secrets from the vault.
+
+    _No parameters._
+
+    ### health_check
+
+    Check that the Sirr server is reachable and healthy.
+
+    _No parameters._
+
+  </Col>
+</Row>
+
+### Audit
+
+<Row>
+  <Col>
+
+    ### sirr_audit
+
+    Query the audit log. Returns recent events such as secret creates, reads, deletes, and API key operations. Useful for security monitoring and debugging access patterns.
+
+    <Properties>
+      <Property name="since" type="number">
+        Only return events after this Unix timestamp. Optional.
+      </Property>
+      <Property name="action" type="string">
+        Filter by action type, e.g. `secret.create`, `secret.read`, `key.create`. Optional.
+      </Property>
+      <Property name="limit" type="number">
+        Maximum number of events to return. Defaults to 50. Optional.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+  </Col>
+</Row>
+
+### Webhooks
+
+<Row>
+  <Col>
+
+    ### sirr_webhook_create
+
+    Register a webhook URL to receive Sirr event notifications. Returns the webhook ID and a signing secret — the secret is shown once, save it immediately.
+
+    <Properties>
+      <Property name="url" type="string" required>
+        Webhook endpoint URL (must start with `http://` or `https://`).
+      </Property>
+      <Property name="events" type="string[]">
+        Event types to subscribe to. Defaults to all events. Examples: `secret.created`, `secret.burned`. Optional.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ### sirr_webhook_list
+
+    List all registered webhooks. Signing secrets are redacted.
+
+    _No parameters._
+
+    ### sirr_webhook_delete
+
+    Remove a webhook registration by its ID.
+
+    <Properties>
+      <Property name="id" type="string" required>
+        The webhook ID to delete.
+      </Property>
+    </Properties>
+
+  </Col>
+</Row>
+
+### API keys
+
+<Row>
+  <Col>
+
+    ### sirr_key_create
+
+    Create a scoped API key with specific permissions. The raw key value is returned once — save it immediately. Permissions: `read`, `write`, `delete`, `admin`. An optional prefix scope limits access to secrets whose key starts with the given prefix.
+
+    <Properties>
+      <Property name="label" type="string" required>
+        Human-readable label for the key.
+      </Property>
+      <Property name="permissions" type="string[]" required>
+        Permissions to grant: `read`, `write`, `delete`, `admin`.
+      </Property>
+      <Property name="prefix" type="string">
+        Optional prefix scope — the key can only access secrets starting with this prefix.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ### sirr_key_list
+
+    List all scoped API keys. Key hashes are never returned.
+
+    _No parameters._
+
+    ### sirr_key_delete
+
+    Delete a scoped API key by its ID.
+
+    <Properties>
+      <Property name="id" type="string" required>
+        The API key ID to delete.
+      </Property>
+    </Properties>
+
+  </Col>
+</Row>
+
+### Identity
+
+<Row>
+  <Col>
+
+    ### sirr_me
+
+    Return the current principal's identity, org membership, role, and effective permissions. Useful for verifying which org and permission set a key resolves to. Requires a principal key (not the master key).
+
+    _No parameters._
+
+  </Col>
+  <Col>
+
+    ### sirr_create_key
+
+    Create a new key for the current principal. The raw key value is returned once -- save it immediately. Keys can be time-windowed with `valid_after` and `valid_before`.
+
+    <Properties>
+      <Property name="name" type="string" required>
+        Human-readable label for the key.
+      </Property>
+      <Property name="valid_after" type="string">
+        ISO 8601 timestamp. Key is not valid before this time. Optional.
+      </Property>
+      <Property name="valid_before" type="string">
+        ISO 8601 timestamp. Key expires after this time. Optional.
+      </Property>
+    </Properties>
+
+    ### sirr_delete_key
+
+    Delete one of the current principal's keys by ID.
+
+    <Properties>
+      <Property name="id" type="string" required>
+        The key ID to delete.
+      </Property>
+    </Properties>
+
+  </Col>
+</Row>
+
+---
+
+## Conversation examples
+
+Here is what it looks like when Claude uses Sirr through MCP.
+
+### Burn after read — across sessions
+
+```txt {{ title: 'Session 1 — store the secret' }}
+❯ set the BITBUCKET_TOKEN to 123asdzxc
+
+⏺ sirr-mcp - push_secret (MCP)(key: "BITBUCKET_TOKEN", value: "123asdzxc", max_reads: 1)
+  ⎿  Stored secret 'BITBUCKET_TOKEN'. Burns after 1 read.
+
+⏺ Stored. Burns after first read.
+```
+
+```txt {{ title: 'Session 2 — Claude retrieves and uses it (vault burns it)' }}
+❯ deploy to staging using sirr:BITBUCKET_TOKEN
+
+⏺ sirr-mcp - get_secret (MCP)(key: "BITBUCKET_TOKEN")
+  ⎿  123asdzxc
+
+⏺ Got it. Deploying to staging with the token. Done.
+```
+
+```txt {{ title: 'Session 3 — secret is already gone' }}
+❯ what is the BITBUCKET_TOKEN?
+
+⏺ sirr-mcp - get_secret (MCP)(key: "BITBUCKET_TOKEN")
+  ⎿  Secret 'BITBUCKET_TOKEN' not found, expired, or already burned.
+
+⏺ The secret no longer exists on the server.
+```
+
+<Note>
+  The secret was burned the moment it was first read — by the vault (`max_reads=1`), not by convention. The `get_secret` tool description also instructs Claude not to memorize or repeat secret values. Two independent layers: server-side destruction and agent-level instruction.
+</Note>
+
+### Storing with a TTL
+
+```txt {{ title: 'Conversation' }}
+User:  Store this API key in Sirr with a 2-hour TTL: sk-live-abc123
+
+AI:    [Calls push_secret(key: "API_KEY", value: "sk-live-abc123", ttl_seconds: 7200)]
+
+       Done. API_KEY is stored and will self-destruct in 2 hours.
+```
+
+### Listing secrets before cleanup
+
+```txt {{ title: 'Conversation' }}
+User:  What secrets do we have stored right now?
+
+AI:    [Calls list_secrets()]
+
+       2 active secrets:
+       - DB_URL    — expires in 58 minutes — 0/1 reads
+       - API_KEY   — expires in 1h 42m     — no read limit
+
+       Would you like me to prune any expired ones?
+
+User:  Yes.
+
+AI:    [Calls prune_secrets()]
+
+       Pruned 1 expired secret. 2 active secrets remain.
+```
+
+<Note>
+  Claude never caches secret values between sessions. Each retrieval is a live call to the Sirr server with full TTL and read-limit enforcement.
+</Note>
+
+---
+
+## Troubleshooting
+
+### Token mismatch (401)
+
+`SIRR_TOKEN` in your `.mcp.json` must equal `SIRR_MASTER_KEY` on the Sirr server exactly. A single extra character or newline will cause every authenticated tool call to fail.
+
+**Diagnose:** `sirr-mcp --health` will show a 401 error if the token is wrong. See [sirr.dev/errors#401](/errors#401).
+
+### Free-tier limit (402)
+
+If `push_secret` fails with a 402 error, your instance has reached 100 active secrets. Delete or let expire the secrets you no longer need, or set `SIRR_LICENSE_KEY` to unlock unlimited usage. See [sirr.dev/errors#402](/errors#402).
+
+### Permission denied (403)
+
+A scoped API key was used but lacks the permission for the operation — for example, a `read`-only key trying to push or delete. Re-create the key with the needed permissions. See [sirr.dev/errors#403](/errors#403).
+
+### Server unreachable
+
+If tool calls time out after 10 seconds:
+
+1. Run `sirr-mcp --health` to confirm connectivity outside of an AI session
+2. Check that `SIRR_SERVER` in `.mcp.json` matches the address Sirr is listening on
+3. If Sirr is on a remote host, verify network access and that the server is running
+
+### SIRR_TOKEN missing
+
+On startup, if `SIRR_TOKEN` is absent, `sirr-mcp` logs a warning to stderr. Tool calls will all return 401 until the token is added to the `env` block in `.mcp.json`. See [sirr.dev/errors#401](/errors#401).
+
+### Plain HTTP on a remote host
+
+If `SIRR_SERVER` is a non-local `http://` URL, `sirr-mcp` warns that secrets will be transmitted unencrypted. Switch to `https://` or secure the connection at the network level.

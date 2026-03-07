@@ -1,0 +1,189 @@
+export const metadata = {
+  title: 'DevOps Quickstart',
+  description:
+    'Bootstrap a Sirr org for your team. Create two patchable secrets — one for a Claude API key, one for a GitHub PAT — each with a dedicated principal that can rotate the value without changing the key name.',
+}
+
+export const sections = [
+  { title: 'Bootstrap the server', id: 'bootstrap' },
+  { title: 'Create two principals', id: 'create-principals' },
+  { title: 'Store a Claude API key', id: 'store-claude-key' },
+  { title: 'Store a GitHub PAT', id: 'store-github-pat' },
+  { title: 'Rotate a secret', id: 'rotate-a-secret' },
+  { title: 'What is next', id: 'what-is-next' },
+]
+
+# DevOps Quickstart
+
+One org, two secrets that never burn — just rotate. Store a Claude API key and a GitHub PAT as patchable org secrets, each locked to a dedicated principal so only the right service can read it. {{ className: 'lead' }}
+
+<Note>
+  This quickstart uses multi-tenant mode. The server is started with `--init` which auto-creates a default org and an admin principal. You will need the org ID and admin key printed on startup.
+</Note>
+
+## Bootstrap the server
+
+Start the server with `--init`. On first boot it creates a default org and two temporary principal keys — an admin and a reader. It prints them to stdout once.
+
+```bash {{ title: 'Start with --init' }}
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+sirrd serve --init
+
+# Output (save these):
+# Org ID:        org_a1b2c3d4
+# Admin key:     sirr_pk_adminXXXX
+# Reader key:    sirr_pk_readerXXXX
+```
+
+Export the values you need:
+
+```bash {{ title: 'Export credentials' }}
+export SIRR_SERVER=http://localhost:39999
+export SIRR_ORG=org_a1b2c3d4          # from --init output
+export SIRR_ADMIN_KEY=sirr_pk_adminXXXX  # from --init output
+```
+
+## Create two principals
+
+Create a principal for each service that will access secrets. Principals are identities inside an org — each gets its own key with scoped permissions.
+
+```bash {{ title: 'Create claude-agent principal' }}
+curl -X POST $SIRR_SERVER/orgs/$SIRR_ORG/principals \
+  -H "Authorization: Bearer $SIRR_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "claude-agent", "role": "member"}'
+
+# Save the principal ID:
+export CLAUDE_PRINCIPAL_ID=princ_xxxxxxxx
+```
+
+```bash {{ title: 'Create github-ci principal' }}
+curl -X POST $SIRR_SERVER/orgs/$SIRR_ORG/principals \
+  -H "Authorization: Bearer $SIRR_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "github-ci", "role": "member"}'
+
+export GITHUB_PRINCIPAL_ID=princ_yyyyyyyy
+```
+
+Now create a key for each principal. Keys are the credentials used at runtime — the principal ID is internal, the key is what goes in `.env` or CI secrets.
+
+```bash {{ title: 'Create a key for claude-agent' }}
+curl -X POST $SIRR_SERVER/orgs/$SIRR_ORG/principals/$CLAUDE_PRINCIPAL_ID/keys \
+  -H "Authorization: Bearer $SIRR_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "claude-agent-key-1"}'
+
+# Save the key (shown once):
+export CLAUDE_KEY=sirr_pk_claude_XXXX
+```
+
+```bash {{ title: 'Create a key for github-ci' }}
+curl -X POST $SIRR_SERVER/orgs/$SIRR_ORG/principals/$GITHUB_PRINCIPAL_ID/keys \
+  -H "Authorization: Bearer $SIRR_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "github-ci-key-1"}'
+
+export GITHUB_KEY=sirr_pk_github_XXXX
+```
+
+## Store a Claude API key
+
+Push the Claude API key as a **sealable** org secret. Setting `delete: false` means the secret is sealed (not burned) when its read limit is reached — you can PATCH the value to rotate it without changing the key name.
+
+The `allowed_keys` field locks this secret to the `claude-agent` principal's key ID so no other principal can read it.
+
+```bash {{ title: 'Store ANTHROPIC_API_KEY as patchable secret' }}
+# First, get the claude-agent key ID (not the key value — the ID)
+curl $SIRR_SERVER/orgs/$SIRR_ORG/principals/$CLAUDE_PRINCIPAL_ID/keys \
+  -H "Authorization: Bearer $SIRR_ADMIN_KEY"
+
+# Store the secret, locked to that key ID
+curl -X POST $SIRR_SERVER/orgs/$SIRR_ORG/secrets \
+  -H "Authorization: Bearer $SIRR_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "ANTHROPIC_API_KEY",
+    "value": "sk-ant-XXXXXXXXXXXXXXXXXXXXXXXX",
+    "delete": false,
+    "allowed_keys": ["<claude-agent-key-id>"]
+  }'
+```
+
+<Note>
+  `delete: false` creates a **sealable** secret. When read limits are reached it blocks reads (sealed) instead of destroying itself. You can then PATCH the value to unseal and rotate it. Omit `max_reads` entirely to allow unlimited reads with no sealing.
+</Note>
+
+Verify `claude-agent` can read it:
+
+```bash {{ title: 'claude-agent reads its secret' }}
+curl $SIRR_SERVER/orgs/$SIRR_ORG/secrets/ANTHROPIC_API_KEY \
+  -H "Authorization: Bearer $CLAUDE_KEY"
+# → { "key": "ANTHROPIC_API_KEY", "value": "sk-ant-XXXX..." }
+```
+
+And that `github-ci` cannot:
+
+```bash {{ title: 'github-ci is blocked' }}
+curl $SIRR_SERVER/orgs/$SIRR_ORG/secrets/ANTHROPIC_API_KEY \
+  -H "Authorization: Bearer $GITHUB_KEY"
+# → 403 Forbidden
+```
+
+## Store a GitHub PAT
+
+Same pattern — sealable, locked to the `github-ci` principal's key.
+
+```bash {{ title: 'Store GITHUB_PAT as patchable secret' }}
+# Get the github-ci key ID
+curl $SIRR_SERVER/orgs/$SIRR_ORG/principals/$GITHUB_PRINCIPAL_ID/keys \
+  -H "Authorization: Bearer $SIRR_ADMIN_KEY"
+
+curl -X POST $SIRR_SERVER/orgs/$SIRR_ORG/secrets \
+  -H "Authorization: Bearer $SIRR_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "GITHUB_PAT",
+    "value": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "delete": false,
+    "allowed_keys": ["<github-ci-key-id>"]
+  }'
+```
+
+GitHub Actions can now fetch the token at runtime using the Sirr CLI or SDK. The PAT stays in the vault — it never touches your repo.
+
+```yaml {{ title: 'GitHub Actions step (example)' }}
+- name: Fetch GITHUB_PAT from Sirr
+  env:
+    SIRR_SERVER: ${{ secrets.SIRR_SERVER }}
+    SIRR_TOKEN: ${{ secrets.GITHUB_SIRR_KEY }}
+    SIRR_ORG: ${{ secrets.SIRR_ORG }}
+  run: |
+    export GITHUB_PAT=$(sirr get GITHUB_PAT --org $SIRR_ORG)
+    # use $GITHUB_PAT in subsequent steps
+```
+
+## Rotate a secret
+
+When your Claude API key or GitHub PAT is regenerated, patch the value in place. The key name stays the same so consuming services need no config changes.
+
+```bash {{ title: 'Rotate ANTHROPIC_API_KEY' }}
+curl -X PATCH $SIRR_SERVER/orgs/$SIRR_ORG/secrets/ANTHROPIC_API_KEY \
+  -H "Authorization: Bearer $SIRR_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"value": "sk-ant-YYYYYYYYYYYYYYYYYYYYYYYY"}'
+# → { "key": "ANTHROPIC_API_KEY", "updated": true }
+```
+
+The audit log records the patch operation. Run `sirr audit` to confirm:
+
+```bash {{ title: 'Confirm in audit log' }}
+sirr audit --org $SIRR_ORG --action secret.updated
+```
+
+## What is next
+
+- [Multi-Team Quickstart](/quickstart/multi-team) — multiple orgs, isolated teams, cross-org audit
+- [API Keys](/api-keys) — scoped keys with prefix restrictions
+- [Audit Logs](/audit-logs) — full audit log reference
+- [MCP Server](/mcp) — multi-tenant MCP configuration

@@ -1,0 +1,177 @@
+export const metadata = {
+  title: 'Deployment',
+  description:
+    'Install and deploy Sirr using Docker, pre-built binaries, Homebrew, or Cargo. Includes a walkthrough of the minimal Docker image.',
+}
+
+export const sections = [
+  { title: 'Docker', id: 'docker' },
+  { title: 'Binary download', id: 'binary-download' },
+  { title: 'Homebrew', id: 'homebrew' },
+  { title: 'Cargo', id: 'cargo' },
+  { title: 'Dockerfile walkthrough', id: 'dockerfile-walkthrough' },
+]
+
+# Deployment
+
+Sirr ships as a single static binary with no runtime dependencies. Choose the installation method that fits your infrastructure. {{ className: 'lead' }}
+
+## Docker
+
+Docker is the recommended way to deploy Sirr. The official image is built `FROM scratch` with a musl-linked static binary, resulting in an image with no shell, no OS, and minimal attack surface.
+
+The image is published to two registries on every release:
+
+| Registry | Image |
+| --- | --- |
+| GitHub Container Registry | `ghcr.io/sirrlock/sirrd` |
+| Docker Hub | `sirrlock/sirrd` |
+
+Both registries carry `latest` and versioned tags (e.g. `v1.0.4`). Use whichever registry your infrastructure already authenticates with — they are identical builds.
+
+```bash {{ title: 'Quick start (GHCR)' }}
+docker run -d \
+  --name sirrd \
+  -p 39999:39999 \
+  -v ./sirrd-data:/data \
+  -e SIRR_MASTER_KEY="$(openssl rand -hex 32)" \
+  -e SIRR_DATA_DIR=/data \
+  ghcr.io/sirrlock/sirrd
+```
+
+```bash {{ title: 'Quick start (Docker Hub)' }}
+docker run -d \
+  --name sirrd \
+  -p 39999:39999 \
+  -v ./sirrd-data:/data \
+  -e SIRR_MASTER_KEY="$(openssl rand -hex 32)" \
+  -e SIRR_DATA_DIR=/data \
+  sirrlock/sirrd
+```
+
+<Note>
+  Always mount a volume to `/data` so your encrypted database survives container restarts. Without a volume, all secrets are lost when the container stops.
+</Note>
+
+For persistent deployments, use Docker Compose:
+
+```yaml {{ title: 'docker-compose.yml' }}
+services:
+  sirrd:
+    image: ghcr.io/sirrlock/sirrd
+    ports:
+      - "39999:39999"
+    volumes:
+      - sirrd-data:/data
+    environment:
+      SIRR_MASTER_KEY: "${SIRR_MASTER_KEY}"
+      SIRR_DATA_DIR: /data
+    restart: unless-stopped
+
+volumes:
+  sirrd-data:
+```
+
+Start the stack:
+
+```bash {{ title: 'Start with Compose' }}
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+docker compose up -d
+```
+
+---
+
+## Binary download {{ id: 'binary-download' }}
+
+Download pre-built binaries from GitHub Releases for your platform. `sirrd` is the server daemon; `sirr` is the CLI client.
+
+### Platform matrix (sirrd server)
+
+| Platform | Archive |
+| --- | --- |
+| Linux (x86_64) | `sirrd-linux-amd64.tar.gz` |
+| Linux (ARM64) | `sirrd-linux-arm64.tar.gz` |
+| macOS (x86_64) | `sirrd-macos-amd64.tar.gz` |
+| macOS (ARM64 / Apple Silicon) | `sirrd-macos-arm64.tar.gz` |
+| Windows (x86_64) | `sirrd-windows-amd64.zip` |
+
+```bash {{ title: 'Download and install (Linux example)' }}
+# Download sirrd (server)
+curl -fsSL https://github.com/sirrlock/sirr/releases/latest/download/sirrd-linux-amd64.tar.gz \
+  | tar -xz -C /usr/local/bin
+
+# Download sirr (CLI)
+curl -fsSL https://github.com/sirrlock/sirr/releases/latest/download/sirr-linux-amd64.tar.gz \
+  | tar -xz -C /usr/local/bin
+
+# Start the server
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+sirrd serve
+```
+
+---
+
+## Homebrew
+
+Install Sirr via Homebrew on macOS or Linux:
+
+```bash {{ title: 'Homebrew' }}
+brew tap sirrlock/tap
+brew install sirrlock/tap/sirrd   # server daemon
+brew install sirrlock/tap/sirr    # CLI client
+```
+
+Then start the server:
+
+```bash {{ title: 'Start after Homebrew install' }}
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+sirrd serve
+```
+
+---
+
+## Cargo
+
+If you have the Rust toolchain installed, you can build `sirrd` from source:
+
+```bash {{ title: 'Install via Cargo' }}
+cargo install sirrd
+```
+
+This compiles the binary from crates.io and places it in your Cargo bin directory. Requires a working Rust toolchain (stable channel).
+
+```bash {{ title: 'Start after Cargo install' }}
+export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+sirrd serve
+```
+
+---
+
+## Dockerfile walkthrough {{ id: 'dockerfile-walkthrough' }}
+
+The official Sirr Docker image uses a multi-stage build to produce the smallest possible image. Here is what the Dockerfile does:
+
+```dockerfile {{ title: 'Dockerfile (simplified)' }}
+# Stage 1: Build a fully static binary with musl
+FROM rust:latest AS builder
+RUN rustup target add x86_64-unknown-linux-musl
+WORKDIR /build
+COPY . .
+RUN cargo build --release --target x86_64-unknown-linux-musl
+
+# Stage 2: Scratch image — no OS, no shell
+FROM scratch
+COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/sirr /sirr
+VOLUME ["/data"]
+EXPOSE 39999
+ENTRYPOINT ["/sirr", "serve"]
+```
+
+### Why `FROM scratch`?
+
+- **No shell** means no shell injection attacks.
+- **No OS packages** means no CVEs from base image dependencies.
+- **Tiny image size** — the final image is just the static binary (typically under 15 MB).
+- **Single process** — the container runs exactly one process with no init system.
+
+The `/data` volume is where Sirr stores `sirr.db` (the redb database) and `sirr.salt` (the Argon2id salt). Both files are required together for decryption — back them up as a pair.

@@ -1,0 +1,313 @@
+export const metadata = {
+  title: 'Errors',
+  description:
+    'Learn about the error responses returned by the Sirr API, including status codes, the error format, and how to troubleshoot common issues.',
+}
+
+export const sections = [
+  { title: 'Status codes', id: 'status-codes' },
+  { title: 'Error response format', id: 'error-response-format' },
+  { title: 'Common errors', id: 'common-errors' },
+  { title: 'MCP errors', id: 'mcp-errors' },
+]
+
+# Errors
+
+When something goes wrong with an API request, Sirr returns a consistent JSON error response with an appropriate HTTP status code. This guide covers every status code the API uses, the error response shape, and how to troubleshoot the most common issues. {{ className: 'lead' }}
+
+---
+
+## Status codes
+
+Sirr uses conventional HTTP status codes to indicate the outcome of a request. Successful operations return `2xx` codes; client mistakes return `4xx`; and server-side failures return `5xx`.
+
+<Properties>
+  <Property name="200 OK">
+    The request succeeded. Returned for successful `GET` and `DELETE` operations.
+  </Property>
+  <Property name="201 Created">
+    A new secret was stored. Returned when `POST /secrets` succeeds.
+  </Property>
+  <Property name="400 Bad Request">
+    The request body is malformed or missing required fields.
+  </Property>
+  <Property name="401 Unauthorized">
+    The `Authorization` header is missing or contains an invalid bearer token.
+  </Property>
+  <Property name="402 Payment Required">
+    The free-tier limit of 100 active secrets has been reached and no valid `SIRR_LICENSE_KEY` is configured.
+  </Property>
+  <Property name="403 Forbidden">
+    The API key is valid but does not have permission for the requested operation.
+  </Property>
+  <Property name="404 Not Found">
+    The requested secret does not exist — it may have expired, been burned after reaching its read limit, or was never created.
+  </Property>
+  <Property name="500 Internal Server Error">
+    An unexpected server-side failure occurred, such as a database or encryption error.
+  </Property>
+</Properties>
+
+---
+
+## Error response format
+
+<Row>
+  <Col>
+
+    Every error response has the same shape: a single JSON object with an `error` key containing a human-readable message. The HTTP status code carries the machine-readable classification.
+
+    There are no error codes or nested objects — the combination of status code and message string is all you need to diagnose the problem.
+
+  </Col>
+  <Col>
+
+    ```json {{ title: 'Error response' }}
+    {
+      "error": "descriptive message"
+    }
+    ```
+
+  </Col>
+</Row>
+
+<Note>
+  The `error` string is intended for developers, not end users. Its wording may
+  change between releases — do not match against it programmatically. Rely on
+  the HTTP status code instead.
+</Note>
+
+---
+
+## Common errors
+
+Below are the errors you are most likely to encounter during development, along with their causes and fixes.
+
+### 400 — Bad Request {{ id: '400' }}
+
+<Row>
+  <Col>
+
+    Returned when the request body is missing a required field or contains an invalid value. The `POST /secrets` endpoint requires both `key` and `value` in the JSON body.
+
+    **Typical causes:**
+
+    - Missing `key` or `value` in the request body
+    - Sending a non-JSON content type
+    - Empty string for `key`
+
+    **Fix:** Ensure your request body is valid JSON with both `key` and `value` fields populated.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Missing required field' }}
+    curl -X POST http://localhost:39999/secrets \
+      -H "Authorization: Bearer $SIRR_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"key": "db/password"}'
+    ```
+
+    ```json {{ title: 'Response — 400' }}
+    {
+      "error": "missing required field: value"
+    }
+    ```
+
+  </Col>
+</Row>
+
+### 401 — Unauthorized {{ id: '401' }}
+
+<Row>
+  <Col>
+
+    Returned when the bearer token is missing or does not match the server's `SIRR_MASTER_KEY`. The comparison is constant-time to prevent timing attacks.
+
+    **Typical causes:**
+
+    - `Authorization` header omitted entirely
+    - Token value does not match `SIRR_MASTER_KEY`
+    - Extra whitespace or encoding issues in the token
+
+    **Fix:** Verify that the token you are sending matches the `SIRR_MASTER_KEY` the server was started with. Check for trailing newlines if loading from a file.
+
+    **MCP users:** `SIRR_TOKEN` in your `.mcp.json` must equal `SIRR_MASTER_KEY` exactly. Run `sirr-mcp --health` to diagnose.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Invalid token' }}
+    curl http://localhost:39999/secrets \
+      -H "Authorization: Bearer wrong-token"
+    ```
+
+    ```json {{ title: 'Response — 401' }}
+    {
+      "error": "unauthorized"
+    }
+    ```
+
+  </Col>
+</Row>
+
+### 402 — Payment Required {{ id: '402' }}
+
+<Row>
+  <Col>
+
+    Sirr's free tier allows up to 100 active (non-expired, non-burned) secrets per instance. Once this limit is reached, `POST /secrets` returns `402` until you either let secrets expire, delete them, or add a valid license key.
+
+    **Fix:** Set `SIRR_LICENSE_KEY` in your environment to unlock unlimited secrets, or remove secrets you no longer need.
+
+  </Col>
+  <Col>
+
+    ```json {{ title: 'Response — 402' }}
+    {
+      "error": "free tier limit reached: 100 active secrets. set SIRR_LICENSE_KEY to unlock unlimited usage"
+    }
+    ```
+
+  </Col>
+</Row>
+
+### 403 — Forbidden {{ id: '403' }}
+
+<Row>
+  <Col>
+
+    Returned when a scoped API key is valid but does not have the permission required by the endpoint. For example, a read-only key cannot call `POST /secrets`.
+
+    **Typical causes:**
+
+    - Using a scoped key that lacks `write`, `delete`, or `admin` permission for the operation
+    - Key's prefix scope does not cover the secret being accessed
+
+    **Fix:** Re-create the API key with the required permissions, or use the master key for operations that require broader access.
+
+  </Col>
+  <Col>
+
+    ```json {{ title: 'Response — 403' }}
+    {
+      "error": "forbidden: insufficient permissions"
+    }
+    ```
+
+  </Col>
+</Row>
+
+### 404 — Not Found {{ id: '404' }}
+
+<Row>
+  <Col>
+
+    The secret you requested does not exist. Because Sirr is an ephemeral vault, this is expected behavior in many cases.
+
+    **Typical causes:**
+
+    - The secret's TTL expired and it was automatically purged
+    - The secret was burned after reaching its configured read limit
+    - The key was never created in the first place
+    - A typo in the secret key
+
+    **Fix:** Secrets are intentionally short-lived. If you need the value again, re-push it. Use `reads` and `ttl` parameters to control secret lifetime.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Expired or burned secret' }}
+    curl http://localhost:39999/secrets/db/password \
+      -H "Authorization: Bearer $SIRR_TOKEN"
+    ```
+
+    ```json {{ title: 'Response — 404' }}
+    {
+      "error": "secret not found"
+    }
+    ```
+
+  </Col>
+</Row>
+
+### 500 — Internal Server Error {{ id: '500' }}
+
+<Row>
+  <Col>
+
+    An unexpected failure on the server side. This typically indicates a problem with the embedded database or the encryption layer.
+
+    **Typical causes:**
+
+    - Disk full or filesystem permissions prevent database writes
+    - Corrupted database file
+    - Encryption or decryption failure (rare)
+
+    **Fix:** Enable debug logging to get more detail, then check disk space and file permissions on the data directory.
+
+    ```bash {{ title: 'Enable debug logging' }}
+    export SIRR_LOG_LEVEL=debug
+    sirr
+    ```
+
+  </Col>
+  <Col>
+
+    ```json {{ title: 'Response — 500' }}
+    {
+      "error": "internal server error"
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## MCP errors
+
+This section covers errors and warnings you may see when running `sirr-mcp` as an MCP server for an AI assistant.
+
+### Connection refused / server unreachable
+
+If the MCP server cannot reach Sirr, tool calls will fail with a message like:
+
+```
+Error: Sirr server at http://localhost:39999 did not respond within 10s. Is it running?
+```
+
+**Fixes:**
+- Confirm Sirr is running: `sirr-mcp --health`
+- Check that `SIRR_SERVER` in your `.mcp.json` matches the address Sirr is listening on
+- If Sirr is on a remote host, verify network access and firewall rules
+
+### SIRR_TOKEN not set
+
+On startup, if `SIRR_TOKEN` is missing, `sirr-mcp` writes a warning to stderr:
+
+```
+[sirr-mcp] Warning: SIRR_TOKEN is not set. See sirr.dev/errors#401
+```
+
+The server still starts, but every authenticated tool call will return a `401` error. Add `SIRR_TOKEN` to the `env` block in `.mcp.json` — its value must equal `SIRR_MASTER_KEY` on the Sirr server.
+
+### Plain HTTP on a remote host
+
+If `SIRR_SERVER` points to a non-local host over plain HTTP, `sirr-mcp` warns:
+
+```
+[sirr-mcp] Warning: SIRR_SERVER is using plain HTTP on a non-local host. Secrets will be transmitted unencrypted.
+```
+
+Switch to an HTTPS URL or ensure the connection is secured at the network level (VPN, private network).
+
+### Diagnosing with --health
+
+Run `sirr-mcp --health` outside of an AI session to get a plain-text health report:
+
+```bash
+SIRR_SERVER=http://localhost:39999 SIRR_TOKEN=mykey sirr-mcp --health
+```
+
+It exits with code `0` on success and `1` on failure, making it usable in scripts and CI pre-flight checks.

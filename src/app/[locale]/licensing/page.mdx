@@ -1,0 +1,170 @@
+export const metadata = {
+  title: 'Licensing & Pricing',
+  description:
+    'Sirr pricing: one product, one price, self-hosted or SaaS. BSL 1.1 license, free Community tier, and Apache 2.0 conversion in 2028.',
+}
+
+export const sections = [
+  { title: 'Pricing', id: 'pricing' },
+  { title: 'Self-hosted vs SaaS', id: 'self-hosted-vs-saas' },
+  { title: 'Business Source License', id: 'business-source-license' },
+  { title: 'License keys', id: 'license-keys' },
+  { title: 'Apache 2.0 conversion', id: 'apache-conversion' },
+  { title: 'Non-production use', id: 'non-production-use' },
+]
+
+# Licensing & Pricing
+
+One product, one price. Same tiers whether you self-host or use Sirr as a managed service. {{ className: 'lead' }}
+
+---
+
+## Pricing {{ id: 'pricing' }}
+
+Every plan includes all features — encryption, TTL, max-read limits, audit logs, webhooks, and the full API. Tiers are based on organization and principal counts.
+
+| | **Solo** | **Solo+** | **Team** | **Business** |
+| --- | --- | --- | --- | --- |
+| **Price** | Free | $199/year | $499/year | $1,999/year |
+| **Organizations** | 1 | 1 | 1 | Unlimited |
+| **Principals** | 1 | 5 | Unlimited | Unlimited |
+| **Secrets** | Unlimited | Unlimited | Unlimited | Unlimited |
+| **Support** | Community | Email | Priority | Dedicated + SLA |
+| **Audit API** | Yes | Yes | Yes | Yes |
+| **Webhooks** | Yes | Yes | Yes | Yes |
+| **Custom roles** | — | Yes | Yes | Yes |
+| **Custom terms** | — | — | — | Yes |
+| **Invoice billing** | — | — | — | Yes |
+
+<div className="not-prose mt-4">
+  <Button href="https://sirrlock.com/pricing" arrow="right">
+    <>Get started at sirrlock.com</>
+  </Button>
+</div>
+
+<Note>
+  Non-production use is always free, regardless of the number of secrets. See [below](#non-production-use) for details.
+</Note>
+
+---
+
+## Self-hosted vs SaaS {{ id: 'self-hosted-vs-saas' }}
+
+Same price, different trade-offs. Pick what fits your infrastructure.
+
+<Row>
+  <Col>
+
+    ### Self-hosted
+
+    Run `sirrd` on your own infrastructure. Your data never leaves your network.
+
+    - Data stays in your VPC / private network
+    - Works air-gapped and offline
+    - Full control over upgrades and configuration
+    - You manage uptime, backups, and TLS
+    - Limits exist in the license terms but are not enforced by the binary
+
+  </Col>
+  <Col>
+
+    ### SaaS (sirrlock.com)
+
+    We host it for you. Team management and billing included.
+
+    - Zero infrastructure to manage
+    - Team and organization management UI
+    - Web-based audit dashboard
+    - Automatic updates and uptime SLA (Business+)
+    - Limits enforced by the platform
+
+  </Col>
+</Row>
+
+Your license key works on both. Use SaaS for dev/staging and self-hosted in your production VPC — same key, same tier, same price.
+
+---
+
+## Business Source License {{ id: 'business-source-license' }}
+
+Sirr is source-available under the Business Source License 1.1 (BSL 1.1). The full source code is available on [GitHub](https://github.com/sirrlock/sirr) — you can audit every line of encryption, storage, and authentication logic.
+
+Key terms:
+
+- **Source-available** — Complete source code is public. Fork it, build it, inspect it.
+- **Free within limits** — Up to 100 active secrets per instance require no license key and no payment.
+- **Commercial license** — Production deployments exceeding the Community tier require a paid license.
+- **Time-limited restriction** — The BSL converts automatically to Apache 2.0 on a fixed date (see [below](#apache-conversion)).
+
+---
+
+## License keys {{ id: 'license-keys' }}
+
+License keys follow the format `sirr_lic_` followed by 40 hexadecimal characters:
+
+```
+sirr_lic_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+```
+
+### Obtaining a key
+
+Purchase a license at [sirrlock.com/pricing](https://sirrlock.com/pricing). You will receive your key immediately after purchase.
+
+### Setting the key
+
+Pass the license key as an environment variable when starting the server:
+
+```bash {{ title: 'Set license key' }}
+export SIRR_LICENSE_KEY="sirr_lic_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+sirrd serve
+```
+
+Or in Docker:
+
+```bash {{ title: 'Docker with license key' }}
+docker run -d \
+  --name sirrd \
+  -p 39999:39999 \
+  -v ./sirrd-data:/data \
+  -e SIRR_MASTER_KEY="your-master-key" \
+  -e SIRR_LICENSE_KEY="sirr_lic_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2" \
+  -e SIRR_DATA_DIR=/data \
+  ghcr.io/sirrlock/sirrd
+```
+
+The server validates the license key at startup by contacting the licensing API. Once validated, the key is cached and the secret limit is lifted according to your plan.
+
+<Note>
+  Self-hosted instances are not required to phone home after initial validation. If the licensing API is unreachable, the server continues operating with the last known validation result. Sirr never blocks secret operations due to a licensing check failure.
+</Note>
+
+---
+
+## Apache 2.0 conversion {{ id: 'apache-conversion' }}
+
+On **February 20, 2028**, the Sirr source code automatically converts from BSL 1.1 to the **Apache License 2.0**. After this date:
+
+- All usage restrictions are permanently removed
+- The code becomes fully open source under Apache 2.0
+- No license key is required for any deployment size
+- The change is irrevocable
+
+This conversion date is written into the license file in the repository and cannot be changed retroactively.
+
+<Note>
+  The BSL 1.1 conversion clause guarantees that Sirr will become fully open source. This protects users from vendor lock-in while allowing the project to sustain itself commercially during the initial period.
+</Note>
+
+---
+
+## Non-production use {{ id: 'non-production-use' }}
+
+All non-production use is **always free**, regardless of the number of active secrets. This includes:
+
+- **Development** — local development environments
+- **Staging** — pre-production staging environments
+- **CI/CD** — continuous integration and testing pipelines
+- **Testing** — automated and manual testing
+- **Evaluation** — trying Sirr before committing to a production deployment
+
+No license key is needed for any of these use cases. The 100-secret limit and license requirement apply only to production deployments.

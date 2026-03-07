@@ -1,0 +1,265 @@
+export const metadata = {
+  title: 'n8n Integration',
+  description:
+    'Use the @sirrlock/n8n-nodes-sirr community node to manage ephemeral secrets from n8n workflows.',
+}
+
+export const sections = [
+  { title: 'Installation', id: 'installation' },
+  { title: 'Credentials', id: 'credentials' },
+  { title: 'Operations', id: 'operations' },
+  { title: 'Example workflow', id: 'example-workflow' },
+]
+
+# n8n Integration
+
+Use Sirr as a secret store inside your n8n workflows. The `@sirrlock/n8n-nodes-sirr` community node gives you full access to secrets, audit logs, webhooks, and principal key management — all from the n8n canvas. {{ className: 'lead' }}
+
+<Note>
+  The n8n node uses the same authenticated HTTP API as the CLI and SDKs. TTL enforcement, read limits, and burn-after-read all work exactly the same.
+</Note>
+
+---
+
+## Installation
+
+Install the community node from npm into your n8n instance, or use the n8n UI.
+
+<Row>
+  <Col>
+
+    ### npm
+
+    ```bash {{ title: 'Install via npm' }}
+    npm install @sirrlock/n8n-nodes-sirr
+    ```
+
+    Restart n8n after installing. The **Sirr** node will appear in the node picker.
+
+    ### n8n UI
+
+    Go to **Settings → Community Nodes**, search for `@sirrlock/n8n-nodes-sirr`, and click **Install**.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Verify installation' }}
+    # Check the node is available
+    n8n list:installed
+    # Should include @sirrlock/n8n-nodes-sirr
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Credentials
+
+Create a **Sirr API** credential in n8n before using the node.
+
+<Row>
+  <Col>
+
+    <Properties>
+      <Property name="Server URL" type="string">
+        Base URL of your Sirr server. Defaults to `http://localhost:39999`.
+      </Property>
+      <Property name="API Token" type="string">
+        Bearer token — your master key or a principal API key.
+      </Property>
+    </Properties>
+
+    The credential uses `Authorization: Bearer <token>` for all requests except health checks, which are unauthenticated.
+
+    For multi-tenant mode, set the **Organization ID** field to route all operations to a specific org.
+
+    <Properties>
+      <Property name="Organization ID" type="string">
+        Org ID for multi-tenant mode. When set, secret, audit, and webhook operations are scoped to this org. The API Token must be a principal key with appropriate permissions. Leave empty for public bucket mode.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+
+    ```json {{ title: 'Credential fields' }}
+    {
+      "serverUrl": "https://sirr.example.com",
+      "apiToken": "your-principal-key",
+      "org": "your-org-id"
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Operations
+
+The Sirr node uses a **resource/operation** dropdown pattern. Select a resource, then pick an operation.
+
+### Secrets
+
+<Row>
+  <Col>
+
+    **Get** — Retrieve a secret by key. Increments the read counter; burns the secret if `max_reads` is reached.
+
+    **Push** — Store a new secret with an optional TTL and max read count.
+
+    **List** — List all secret metadata (keys, TTLs, read counts). No values returned.
+
+    **Delete** — Delete a secret immediately regardless of TTL or read count.
+
+    **Prune** — Remove all expired secrets from the vault.
+
+  </Col>
+  <Col>
+
+    <Properties>
+      <Property name="key" type="string" required>
+        Secret key name (Get, Delete).
+      </Property>
+      <Property name="value" type="string" required>
+        Secret value (Push).
+      </Property>
+      <Property name="ttl_seconds" type="number">
+        Time-to-live in seconds. 0 = no expiry (Push).
+      </Property>
+      <Property name="max_reads" type="number">
+        Maximum reads before burn. 0 = unlimited (Push).
+      </Property>
+    </Properties>
+
+  </Col>
+</Row>
+
+### Audit
+
+<Row>
+  <Col>
+
+    **Query** — Search the audit log for recent events. Filter by timestamp, action type, and limit.
+
+    <Properties>
+      <Property name="since" type="number">
+        Only return events after this Unix timestamp.
+      </Property>
+      <Property name="action" type="string">
+        Filter by action, e.g. `secret.create`, `secret.read`.
+      </Property>
+      <Property name="limit" type="number">
+        Max events to return. Defaults to 50.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+  </Col>
+</Row>
+
+### Webhooks
+
+<Row>
+  <Col>
+
+    **Create** — Register a URL to receive event notifications. Returns a signing secret (shown once — save it).
+
+    **List** — List registered webhooks. Signing secrets are redacted.
+
+    **Delete** — Remove a webhook by ID.
+
+    <Properties>
+      <Property name="url" type="string" required>
+        Endpoint URL (Create).
+      </Property>
+      <Property name="events" type="string">
+        Comma-separated event types. Empty = all events (Create).
+      </Property>
+      <Property name="webhookId" type="string" required>
+        Webhook ID (Delete).
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+  </Col>
+</Row>
+
+### Principal (multi-tenant)
+
+<Row>
+  <Col>
+
+    **Get Me** — Return the current principal's identity, org, role, and effective permissions. Requires a principal key.
+
+    **Update Me** — Set arbitrary key-value metadata on your principal record.
+
+    **Create Key** — Create a new named API key for the current principal. The raw token is returned once — save it immediately. Supports optional validity windows.
+
+    **Delete Key** — Revoke one of the current principal's keys by ID.
+
+    <Properties>
+      <Property name="metadata" type="object">
+        Key-value pairs to set on the principal (Update Me). Entered as repeatable Key / Value rows in the n8n UI.
+      </Property>
+      <Property name="name" type="string" required>
+        Human-readable name for the new key (Create Key).
+      </Property>
+      <Property name="valid_for_seconds" type="number">
+        Key validity duration in seconds from the moment of creation. Omit or set 0 for no expiry (Create Key).
+      </Property>
+      <Property name="valid_before" type="number">
+        Hard expiry as a Unix timestamp — the key cannot be used after this point. Omit or set 0 for no limit (Create Key).
+      </Property>
+      <Property name="keyId" type="string" required>
+        Key ID to revoke (Delete Key).
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col>
+  </Col>
+</Row>
+
+<Note>
+  When the **Organization ID** credential field is set, all Secrets, Audit, Webhook, and Prune operations are automatically routed to the org-scoped endpoints (`/orgs/{org_id}/...`). Principal and Server operations are always global. No changes to existing workflows are needed beyond setting the credential field.
+</Note>
+
+### Server
+
+<Row>
+  <Col>
+
+    **Health Check** — Verify the Sirr server is reachable. No authentication required.
+
+  </Col>
+  <Col>
+  </Col>
+</Row>
+
+---
+
+## Example workflow
+
+A common pattern is to push a one-time secret, pass the key to a downstream service, and let Sirr handle expiration automatically.
+
+```txt {{ title: 'Workflow: one-time secret handoff' }}
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Trigger    │────▶│ Sirr: Push  │────▶│ HTTP Request│
+│ (schedule)   │     │ Secret      │     │ (send key)  │
+└─────────────┘     └─────────────┘     └─────────────┘
+                    key: "deploy-token"
+                    ttl: 3600
+                    max_reads: 1
+```
+
+1. **Sirr → Push Secret** — store a generated token with `ttl_seconds: 3600` and `max_reads: 1`
+2. **HTTP Request** — send the secret key to a downstream service
+3. The downstream service calls Sirr to retrieve the secret once — it burns automatically
+
+<Note>
+  For CI/CD pipelines, combine with the **Audit → Query** operation to verify that secrets were consumed as expected.
+</Note>

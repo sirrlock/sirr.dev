@@ -1,0 +1,502 @@
+import { Libraries } from '@/components/Libraries'
+
+export const metadata = {
+  title: 'SDKs',
+  description:
+    'Official Sirr client libraries for Node.js, Python, .NET, and the Rust CLI.',
+}
+
+export const sections = [
+  { title: 'Official libraries', id: 'official-libraries' },
+  { title: 'Node.js', id: 'node-js' },
+  { title: 'Python', id: 'python' },
+  { title: '.NET', id: 'dotnet' },
+  { title: 'Rust CLI', id: 'rust-cli' },
+  { title: 'Multi-tenant (org-scoped)', id: 'multi-tenant' },
+  { title: 'Audit, webhooks & keys', id: 'audit-webhooks-keys' },
+]
+
+# SDKs
+
+The fastest way to integrate with Sirr is through one of the official client libraries. Each SDK wraps the HTTP API so you can push and retrieve secrets with a single function call. {{ className: 'lead' }}
+
+## Official libraries
+
+<Libraries />
+
+---
+
+## Node.js
+
+<Row>
+  <Col>
+
+    The `@sirrlock/node` package is a zero-dependency TypeScript client built on native `fetch`. It ships ESM and CJS bundles so it works in Node.js, Deno, Bun, and edge runtimes.
+
+    ```bash {{ title: 'Install' }}
+    npm install @sirrlock/node
+    ```
+
+    <div className="not-prose">
+      <Button href="https://github.com/sirrlock/node" variant="text" arrow="right">
+        <>View on GitHub</>
+      </Button>
+    </div>
+
+  </Col>
+  <Col>
+
+    ```js {{ title: 'Usage' }}
+    import { SirrClient } from '@sirrlock/node'
+
+    const sirr = new SirrClient({
+      server: process.env.SIRR_SERVER,
+      token: process.env.SIRR_TOKEN,
+    })
+
+    // Push a secret with a 1-hour TTL and 3 read limit
+    await sirr.push('db/password', 's3cret!', {
+      ttl: 3600,
+      reads: 3,
+    })
+
+    // Retrieve the secret
+    const secret = await sirr.get('db/password')
+    console.log(secret.value) // "s3cret!"
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Python
+
+<Row>
+  <Col>
+
+    The `sirr` package provides both synchronous and asynchronous clients powered by `httpx`. Python 3.10+ is supported.
+
+    ```bash {{ title: 'Install' }}
+    pip install sirr
+    ```
+
+    <div className="not-prose">
+      <Button href="https://github.com/sirrlock/python" variant="text" arrow="right">
+        <>View on GitHub</>
+      </Button>
+    </div>
+
+  </Col>
+  <Col>
+
+    ```python {{ title: 'Sync usage' }}
+    import os
+    from sirr import SirrClient
+
+    client = SirrClient(
+        server=os.environ["SIRR_SERVER"],
+        token=os.environ["SIRR_TOKEN"],
+    )
+
+    # Push a secret with a 1-hour TTL and 3 read limit
+    client.push("db/password", "s3cret!", ttl=3600, reads=3)
+
+    # Retrieve the secret — returns the value string, or None if burned/expired
+    value = client.get("db/password")
+    print(value)  # "s3cret!"
+    ```
+
+    ```python {{ title: 'Async usage' }}
+    from sirr import AsyncSirrClient
+
+    async with AsyncSirrClient(
+        server=os.environ["SIRR_SERVER"],
+        token=os.environ["SIRR_TOKEN"],
+    ) as client:
+        await client.push("db/password", "s3cret!", ttl=3600, reads=3)
+        value = await client.get("db/password")
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## .NET {{ anchor: false, id: 'dotnet' }}
+
+<Row>
+  <Col>
+
+    `Sirr.Client` is an async-first .NET library built on `HttpClient`. Targets .NET 8+ and supports dependency injection via `IHttpClientFactory`.
+
+    ```bash {{ title: 'Install' }}
+    dotnet add package Sirr.Client
+    ```
+
+    <div className="not-prose">
+      <Button href="https://github.com/sirrlock/dotnet" variant="text" arrow="right">
+        <>View on GitHub</>
+      </Button>
+    </div>
+
+  </Col>
+  <Col>
+
+    ```csharp {{ title: 'Usage' }}
+    using Sirr;
+
+    var client = new SirrClient(new SirrOptions
+    {
+        Server = Environment.GetEnvironmentVariable("SIRR_SERVER"),
+        Token = Environment.GetEnvironmentVariable("SIRR_TOKEN"),
+    });
+
+    // Push a secret
+    await client.PushAsync("db/password", "s3cret!", new PushOptions
+    {
+        Ttl = 3600,
+        Reads = 3,
+    });
+
+    // Retrieve the secret
+    var secret = await client.GetAsync("db/password");
+    Console.WriteLine(secret.Value); // "s3cret!"
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Rust CLI
+
+<Row>
+  <Col>
+
+    The `sirr` binary is both the server and a built-in CLI. You can use it to push and retrieve secrets directly from the command line without any additional tooling.
+
+    ```bash {{ title: 'Install via Cargo' }}
+    cargo install sirr
+    ```
+
+    Or download a prebuilt binary from the [GitHub releases](https://github.com/sirrlock/sirr/releases) page.
+
+    <div className="not-prose">
+      <Button href="https://github.com/sirrlock/sirr" variant="text" arrow="right">
+        <>View on GitHub</>
+      </Button>
+    </div>
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'CLI usage' }}
+    # Set your server and token
+    export SIRR_SERVER=http://localhost:39999
+    export SIRR_TOKEN=your-master-key
+
+    # Push a secret with a 1-hour TTL
+    sirr push db/password "s3cret!" --ttl 3600 --reads 3
+
+    # Get a secret
+    sirr get db/password
+
+    # List all secrets (metadata only)
+    sirr list
+
+    # Delete a secret
+    sirr delete db/password
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Multi-tenant (org-scoped) {{ anchor: false, id: 'multi-tenant' }}
+
+All three SDKs support multi-tenant mode. Pass an `org` parameter to scope secrets, principals, and keys to a specific organization. The examples above use **public bucket mode** (no org). The examples below show **org-scoped mode**.
+
+<Note>
+  Org-scoped mode requires a principal key (not the master key). Start the server with `sirrd serve --init` to bootstrap a default org and admin principal with temporary keys.
+</Note>
+
+<CodeGroup title="Constructor with org">
+
+```js {{ title: 'Node.js' }}
+import { SirrClient } from '@sirrlock/node'
+
+const sirr = new SirrClient({
+  server: process.env.SIRR_SERVER,
+  token: process.env.SIRR_TOKEN,
+  org: process.env.SIRR_ORG,         // org ID from auto-init or createOrg
+})
+```
+
+```python {{ title: 'Python' }}
+import os
+from sirr import SirrClient
+
+client = SirrClient(
+    server=os.environ["SIRR_SERVER"],
+    token=os.environ["SIRR_TOKEN"],
+    org=os.environ["SIRR_ORG"],
+)
+```
+
+```csharp {{ title: '.NET' }}
+using Sirr;
+
+var client = new SirrClient(new SirrOptions
+{
+    Server = Environment.GetEnvironmentVariable("SIRR_SERVER"),
+    Token = Environment.GetEnvironmentVariable("SIRR_TOKEN"),
+    Org = Environment.GetEnvironmentVariable("SIRR_ORG"),
+});
+```
+
+</CodeGroup>
+
+<CodeGroup title="Org-scoped push and get">
+
+```js {{ title: 'Node.js' }}
+// Push to org bucket
+await sirr.push('db/password', 's3cret!', { ttl: 3600, reads: 3 })
+
+// Retrieve from org bucket
+const secret = await sirr.get('db/password')
+console.log(secret.value) // "s3cret!"
+```
+
+```python {{ title: 'Python' }}
+# Push to org bucket
+client.push("db/password", "s3cret!", ttl=3600, reads=3)
+
+# Retrieve from org bucket — returns the value string, or None
+value = client.get("db/password")
+print(value)  # "s3cret!"
+```
+
+```csharp {{ title: '.NET' }}
+// Push to org bucket
+await client.PushAsync("db/password", "s3cret!", new PushOptions
+{
+    Ttl = 3600,
+    Reads = 3,
+});
+
+// Retrieve from org bucket
+var secret = await client.GetAsync("db/password");
+Console.WriteLine(secret.Value); // "s3cret!"
+```
+
+</CodeGroup>
+
+<CodeGroup title="/me endpoint">
+
+```js {{ title: 'Node.js' }}
+// Get the current principal's identity and permissions
+const me = await sirr.me()
+console.log(me.principal_id) // "admin"
+console.log(me.org_id)       // "default"
+console.log(me.permissions)  // ["read", "write", "admin", ...]
+```
+
+```python {{ title: 'Python' }}
+# Get the current principal's identity and role
+me = client.me()
+print(me.id)      # "p_abc123..."
+print(me.name)    # "admin"
+print(me.role)    # "admin"
+print(me.org_id)  # "org_abc123..."
+```
+
+```csharp {{ title: '.NET' }}
+// Get the current principal's identity and permissions
+var me = await client.MeAsync();
+Console.WriteLine(me.PrincipalId); // "admin"
+Console.WriteLine(me.OrgId);       // "default"
+```
+
+</CodeGroup>
+
+<CodeGroup title="Admin methods">
+
+```js {{ title: 'Node.js' }}
+// Create a new organization (requires master key)
+const org = await sirr.orgs.create({ name: 'acme-corp' })
+
+// Create a principal in the org
+const principal = await sirr.principals.create({
+  org: org.id,
+  name: 'deploy-bot',
+  role: 'writer',
+})
+
+// Create a key for the principal
+const key = await sirr.principals.createKey({
+  org: org.id,
+  principal: principal.id,
+  name: 'ci-key',
+})
+console.log(key.token) // Save — shown only once
+```
+
+```python {{ title: 'Python' }}
+# Create a new organization (requires master key)
+org = client.create_org("acme-corp")
+
+# Create a principal in the org
+principal = client.create_principal(org.id, "deploy-bot", "writer")
+
+# Create a key (self-service via /me/keys — use a principal token)
+key = client.create_key("ci-key")
+print(key.key)  # sirr_key_... — Save, shown only once
+```
+
+```csharp {{ title: '.NET' }}
+// Create a new organization (requires master key)
+var org = await client.Orgs.CreateAsync(new OrgOptions
+{
+    Name = "acme-corp",
+});
+
+// Create a principal in the org
+var principal = await client.Principals.CreateAsync(new PrincipalOptions
+{
+    Org = org.Id,
+    Name = "deploy-bot",
+    Role = "writer",
+});
+
+// Create a key for the principal
+var key = await client.Principals.CreateKeyAsync(new PrincipalKeyOptions
+{
+    Org = org.Id,
+    Principal = principal.Id,
+    Name = "ci-key",
+});
+Console.WriteLine(key.Token); // Save — shown only once
+```
+
+</CodeGroup>
+
+---
+
+## Audit, webhooks & keys {{ anchor: false, id: 'audit-webhooks-keys' }}
+
+All three SDKs expose methods for the newer Sirr server features: audit logs, webhooks, and scoped API keys.
+
+<CodeGroup title="Audit logs">
+
+```js {{ title: 'Node.js' }}
+// Query audit log
+const logs = await sirr.audit({ action: 'secret.read', limit: 50 })
+
+// Query with time range
+const recent = await sirr.audit({ since: Math.floor(Date.now() / 1000) - 86400 })
+```
+
+```python {{ title: 'Python' }}
+# Query audit log
+logs = client.get_audit_log(action="secret.read", limit=50)
+
+# Query with time range
+import time
+recent = client.get_audit_log(since=int(time.time()) - 86400)
+```
+
+```csharp {{ title: '.NET' }}
+// Query audit log
+var logs = await client.AuditAsync(new AuditOptions
+{
+    Action = "secret.read",
+    Limit = 50,
+});
+```
+
+</CodeGroup>
+
+<CodeGroup title="Webhooks">
+
+```js {{ title: 'Node.js' }}
+// Register a webhook
+const wh = await sirr.webhooks.create({
+  url: 'https://example.com/hooks/sirr',
+  events: ['secret.created', 'secret.burned'],
+})
+
+// List and delete
+const all = await sirr.webhooks.list()
+await sirr.webhooks.delete(wh.id)
+```
+
+```python {{ title: 'Python' }}
+# Register a webhook
+wh = client.create_webhook(
+    "https://example.com/hooks/sirr",
+    events=["secret.created", "secret.burned"],
+)
+
+# List and delete
+all_hooks = client.list_webhooks()
+client.delete_webhook(wh.id)
+```
+
+```csharp {{ title: '.NET' }}
+// Register a webhook
+var wh = await client.Webhooks.CreateAsync(new WebhookOptions
+{
+    Url = "https://example.com/hooks/sirr",
+    Events = ["secret.created", "secret.burned"],
+});
+
+// List and delete
+var all = await client.Webhooks.ListAsync();
+await client.Webhooks.DeleteAsync(wh.Id);
+```
+
+</CodeGroup>
+
+<CodeGroup title="Scoped API keys">
+
+```js {{ title: 'Node.js' }}
+// Create a scoped key
+const key = await sirr.keys.create({
+  name: 'CI pipeline',
+  permissions: ['read', 'write'],
+  prefix: 'ci/',
+})
+console.log(key.token) // Save — shown only once
+
+// List and revoke
+const keys = await sirr.keys.list()
+await sirr.keys.delete(key.id)
+```
+
+```python {{ title: 'Python' }}
+# Create a scoped key (self-service — use a principal token)
+key = client.create_key("CI pipeline", valid_for_seconds=86400)
+print(key.key)  # sirr_key_... — Save, shown only once
+
+# Revoke a key
+client.delete_key(key.id)
+```
+
+```csharp {{ title: '.NET' }}
+// Create a scoped key
+var key = await client.Keys.CreateAsync(new KeyOptions
+{
+    Name = "CI pipeline",
+    Permissions = ["read", "write"],
+    Prefix = "ci/",
+});
+Console.WriteLine(key.Token); // Save — shown only once
+
+// List and revoke
+var keys = await client.Keys.ListAsync();
+await client.Keys.DeleteAsync(key.Id);
+```
+
+</CodeGroup>

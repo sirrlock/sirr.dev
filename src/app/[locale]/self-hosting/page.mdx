@@ -1,0 +1,216 @@
+export const metadata = {
+  title: 'Self-Hosting',
+  description:
+    'Production checklist, reverse proxy configuration, TLS termination, backup strategies, and monitoring for self-hosted Sirr deployments.',
+}
+
+export const sections = [
+  { title: 'Production checklist', id: 'production-checklist' },
+  { title: 'Reverse proxy', id: 'reverse-proxy' },
+  { title: 'TLS termination', id: 'tls-termination' },
+  { title: 'Backups', id: 'backups' },
+  { title: 'Monitoring', id: 'monitoring' },
+  { title: 'Production Docker Compose', id: 'docker-compose-production' },
+]
+
+# Self-Hosting
+
+Sirr is designed to be self-hosted. This guide covers everything you need to run Sirr in production with proper security, persistence, and monitoring. {{ className: 'lead' }}
+
+## Production checklist {{ id: 'production-checklist' }}
+
+Before exposing Sirr to production traffic, verify each item:
+
+- **Strong master key** — Generate a cryptographically random key with at least 32 bytes of entropy: `openssl rand -hex 32`. Never reuse keys across environments.
+- **TLS everywhere** — Sirr itself does not terminate TLS. Place it behind a reverse proxy with TLS or use a service mesh. Without TLS, secrets are transmitted in plaintext over the network.
+- **Persistent storage** — Mount a volume to `/data` so `sirr.db` and `sirr.salt` survive container restarts and redeployments.
+- **Backup both files** — `sirr.db` and `sirr.salt` are both required for decryption. Back them up together.
+- **Log level** — Set `SIRR_LOG_LEVEL=info` for production. Use `debug` or `trace` only for troubleshooting.
+- **Resource limits** — Set memory and CPU limits on the container to prevent runaway resource usage.
+- **Restart policy** — Use `restart: unless-stopped` or `restart: always` to recover from crashes.
+
+<Note>
+  If you lose `sirr.salt`, all encrypted secrets become permanently unrecoverable — even if you have the master key and the database file. Always back up both files together.
+</Note>
+
+---
+
+## Reverse proxy {{ id: 'reverse-proxy' }}
+
+Sirr listens on port 39999 by default and expects a reverse proxy to handle TLS termination, rate limiting, and public-facing traffic.
+
+### Nginx
+
+```nginx {{ title: 'nginx.conf' }}
+upstream sirr {
+    server 127.0.0.1:39999;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name sirr.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/sirr.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/sirr.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://sirr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### Caddy
+
+Caddy provides automatic TLS via Let's Encrypt with zero configuration:
+
+```text {{ title: 'Caddyfile' }}
+sirr.example.com {
+    reverse_proxy localhost:39999
+}
+```
+
+That is it. Caddy automatically obtains and renews TLS certificates.
+
+---
+
+## TLS termination {{ id: 'tls-termination' }}
+
+Sirr does not handle TLS itself. You have two main options:
+
+### Let's Encrypt with Certbot (Nginx)
+
+```bash {{ title: 'Certbot setup' }}
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d sirr.example.com
+```
+
+Certbot automatically configures Nginx and sets up certificate renewal via a cron job.
+
+### Caddy auto-TLS
+
+Caddy handles TLS automatically when you provide a domain name in the Caddyfile. No additional setup is required — certificates are obtained and renewed automatically via the ACME protocol.
+
+---
+
+## Backups {{ id: 'backups' }}
+
+Sirr stores all data in two files inside the data directory:
+
+| File | Purpose |
+| --- | --- |
+| `sirr.db` | redb embedded database containing all encrypted secrets and metadata |
+| `sirr.salt` | Argon2id salt used to derive the encryption key from your master key |
+
+<Note>
+  Both files are required together. The database is useless without the salt, and vice versa. Always back them up as a pair.
+</Note>
+
+```bash {{ title: 'Backup script example' }}
+#!/bin/bash
+BACKUP_DIR="/backups/sirr/$(date +%Y%m%d-%H%M%S)"
+DATA_DIR="/data"
+
+mkdir -p "$BACKUP_DIR"
+cp "$DATA_DIR/sirr.db" "$BACKUP_DIR/"
+cp "$DATA_DIR/sirr.salt" "$BACKUP_DIR/"
+
+# Optional: compress and encrypt the backup
+tar -czf "$BACKUP_DIR.tar.gz" -C "$(dirname "$BACKUP_DIR")" "$(basename "$BACKUP_DIR")"
+rm -rf "$BACKUP_DIR"
+```
+
+Schedule this with cron or your preferred task scheduler. Test restores regularly — a backup you have never restored is a backup you do not have.
+
+---
+
+## Monitoring {{ id: 'monitoring' }}
+
+### Health checks
+
+The `GET /health` endpoint requires no authentication and returns `{"status":"ok"}` when the server is ready:
+
+```bash {{ title: 'Health check' }}
+curl -f http://localhost:39999/health
+```
+
+Use this endpoint with your uptime monitoring tool (Uptime Kuma, Pingdom, AWS ALB health checks, Kubernetes liveness probes, etc.).
+
+### Log levels
+
+Control log verbosity with the `SIRR_LOG_LEVEL` environment variable:
+
+| Level | Use case |
+| --- | --- |
+| `error` | Only critical failures |
+| `warn` | Warnings and errors |
+| `info` | Recommended for production — request logs and lifecycle events |
+| `debug` | Verbose output for troubleshooting |
+| `trace` | Maximum verbosity — includes internal state |
+
+---
+
+## Production Docker Compose {{ id: 'docker-compose-production' }}
+
+A production-ready Compose file with named volumes, restart policies, resource limits, and a Caddy reverse proxy:
+
+```yaml {{ title: 'docker-compose.production.yml' }}
+services:
+  sirrd:
+    image: ghcr.io/sirrlock/sirrd  # or sirrlock/sirrd (Docker Hub)
+    volumes:
+      - sirrd-data:/data
+    environment:
+      SIRR_MASTER_KEY: "${SIRR_MASTER_KEY}"
+      SIRR_DATA_DIR: /data
+      SIRR_LOG_LEVEL: info
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:39999/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
+volumes:
+  sirrd-data:
+  caddy-data:
+  caddy-config:
+```
+
+<Note>
+  The `FROM scratch` Sirr image has no shell, so the healthcheck uses `wget` syntax as an example. In practice, configure health checks at the reverse proxy or orchestrator level instead.
+</Note>
+
+Pair it with a Caddyfile:
+
+```text {{ title: 'Caddyfile' }}
+sirr.example.com {
+    reverse_proxy sirrd:39999
+}
+```
+
+Start the stack:
+
+```bash {{ title: 'Deploy' }}
+export SIRR_MASTER_KEY="your-production-master-key"
+docker compose -f docker-compose.production.yml up -d
+```

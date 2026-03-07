@@ -1,0 +1,262 @@
+export const metadata = {
+  title: 'Webhooks',
+  description:
+    'Configure webhooks to receive real-time notifications when secrets are created, read, burned, or expired.',
+}
+
+export const sections = [
+  { title: 'Overview', id: 'overview' },
+  { title: 'Create a webhook', id: 'post-webhooks' },
+  { title: 'List webhooks', id: 'get-webhooks' },
+  { title: 'Delete a webhook', id: 'delete-webhooks-id' },
+  { title: 'Event payloads', id: 'event-payloads' },
+  { title: 'HMAC verification', id: 'hmac-verification' },
+]
+
+# Webhooks
+
+Sirr can send HTTP POST requests to your endpoints whenever secret events occur. Use webhooks to trigger workflows, update dashboards, or feed audit systems in real time. {{ className: 'lead' }}
+
+## Overview
+
+Register a webhook URL and subscribe to one or more event types. When an event occurs, Sirr sends a JSON payload to your URL with an HMAC signature for verification. Failed deliveries are retried with exponential backoff.
+
+<Note>
+  Webhooks are fire-and-forget from Sirr's perspective — they do not block the original API request. A slow or failing webhook endpoint will not impact secret operations.
+</Note>
+
+---
+
+## Create a webhook {{ tag: 'POST', label: '/webhooks', id: 'post-webhooks' }}
+
+<Row>
+  <Col>
+
+    Register a new webhook endpoint.
+
+    ### Required attributes
+
+    <Properties>
+      <Property name="url" type="string">
+        The HTTPS endpoint that will receive webhook payloads.
+      </Property>
+      <Property name="events" type="string[]">
+        Array of event types to subscribe to. Use `["*"]` for all events.
+      </Property>
+    </Properties>
+
+    ### Optional attributes
+
+    <Properties>
+      <Property name="description" type="string">
+        Human-readable label for this webhook.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="POST" label="/webhooks">
+
+    ```bash {{ title: 'cURL' }}
+    curl -X POST http://localhost:39999/webhooks \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "url": "https://example.com/hooks/sirr",
+        "events": ["secret.created", "secret.read", "secret.burned"],
+        "description": "Slack notifier"
+      }'
+    ```
+
+    ```js {{ title: 'Node.js' }}
+    const webhook = await sirr.webhooks.create({
+      url: 'https://example.com/hooks/sirr',
+      events: ['secret.created', 'secret.read', 'secret.burned'],
+      description: 'Slack notifier',
+    })
+    ```
+
+    ```python {{ title: 'Python' }}
+    webhook = client.webhooks.create(
+        url="https://example.com/hooks/sirr",
+        events=["secret.created", "secret.read", "secret.burned"],
+        description="Slack notifier",
+    )
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response (201)' }}
+    {
+      "id": "wh_a1b2c3d4",
+      "url": "https://example.com/hooks/sirr",
+      "events": ["secret.created", "secret.read", "secret.burned"],
+      "description": "Slack notifier",
+      "created_at": 1700000000
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## List webhooks {{ tag: 'GET', label: '/webhooks', id: 'get-webhooks' }}
+
+<Row>
+  <Col>
+
+    List all registered webhook endpoints.
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="GET" label="/webhooks">
+
+    ```bash {{ title: 'cURL' }}
+    curl http://localhost:39999/webhooks \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY"
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response' }}
+    {
+      "webhooks": [
+        {
+          "id": "wh_a1b2c3d4",
+          "url": "https://example.com/hooks/sirr",
+          "events": ["secret.created", "secret.read", "secret.burned"],
+          "description": "Slack notifier",
+          "created_at": 1700000000
+        }
+      ]
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Delete a webhook {{ tag: 'DELETE', label: '/webhooks/:id', id: 'delete-webhooks-id' }}
+
+<Row>
+  <Col>
+
+    Remove a webhook endpoint. No further events will be delivered to this URL.
+
+    ### Path parameters
+
+    <Properties>
+      <Property name="id" type="string">
+        The webhook ID returned when it was created.
+      </Property>
+    </Properties>
+
+  </Col>
+  <Col sticky>
+
+    <CodeGroup title="Request" tag="DELETE" label="/webhooks/:id">
+
+    ```bash {{ title: 'cURL' }}
+    curl -X DELETE http://localhost:39999/webhooks/wh_a1b2c3d4 \
+      -H "Authorization: Bearer $SIRR_MASTER_KEY"
+    ```
+
+    </CodeGroup>
+
+    ```json {{ title: 'Response' }}
+    {
+      "deleted": true
+    }
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## Event payloads
+
+When an event occurs, Sirr sends a POST request to each subscribed webhook URL with a JSON body.
+
+```json {{ title: 'Example payload' }}
+{
+  "id": "evt_x1y2z3",
+  "type": "secret.read",
+  "timestamp": 1700003600,
+  "data": {
+    "key": "db/password",
+    "read_count": 1,
+    "max_reads": 3,
+    "expires_at": 1700007200
+  }
+}
+```
+
+### Event types
+
+| Event | Triggered when |
+| --- | --- |
+| `secret.created` | A new secret is pushed |
+| `secret.read` | A secret is retrieved |
+| `secret.deleted` | A secret is explicitly deleted |
+| `secret.burned` | A secret reaches its read limit and is destroyed |
+| `secret.expired` | A secret's TTL elapses and it is destroyed |
+
+---
+
+## HMAC verification
+
+Every webhook request includes an `X-Sirr-Signature` header containing an HMAC-SHA256 signature of the request body. Verify this signature to ensure the payload was sent by your Sirr instance and has not been tampered with.
+
+The HMAC secret is set via the `SIRR_WEBHOOK_SECRET` environment variable.
+
+<Row>
+  <Col>
+
+    ### Verification steps
+
+    1. Read the raw request body (do not parse JSON first)
+    2. Compute `HMAC-SHA256(body, SIRR_WEBHOOK_SECRET)`
+    3. Compare the hex-encoded result with the `X-Sirr-Signature` header
+    4. Use constant-time comparison to prevent timing attacks
+
+  </Col>
+  <Col>
+
+    ```js {{ title: 'Node.js verification' }}
+    import { createHmac, timingSafeEqual } from 'crypto'
+
+    function verifyWebhook(body, signature, secret) {
+      const expected = createHmac('sha256', secret)
+        .update(body)
+        .digest('hex')
+      return timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expected),
+      )
+    }
+    ```
+
+    ```python {{ title: 'Python verification' }}
+    import hmac
+    import hashlib
+
+    def verify_webhook(body: bytes, signature: str, secret: str) -> bool:
+        expected = hmac.new(
+            secret.encode(),
+            body,
+            hashlib.sha256,
+        ).hexdigest()
+        return hmac.compare_digest(signature, expected)
+    ```
+
+  </Col>
+</Row>
+
+<Note>
+  If `SIRR_WEBHOOK_SECRET` is not set, webhooks are delivered without signatures. Always set this variable in production to prevent spoofed webhook payloads.
+</Note>

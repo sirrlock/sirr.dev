@@ -1,0 +1,198 @@
+export const metadata = {
+  title: 'Install',
+  description:
+    'Every way to install sirrd (server) and sirr (CLI) — install script, Homebrew, Scoop, Docker, crates.io, npm, and more.',
+}
+
+export const sections = [
+  { title: 'Install script', id: 'install-script' },
+  { title: 'Homebrew', id: 'homebrew' },
+  { title: 'Scoop (Windows)', id: 'scoop' },
+  { title: 'Docker', id: 'docker' },
+  { title: 'Binary download', id: 'binary-download' },
+  { title: 'crates.io', id: 'crates-io' },
+  { title: 'npm', id: 'npm' },
+  { title: 'Coming soon', id: 'coming-soon' },
+]
+
+# Install
+
+Every official distribution channel for `sirrd` (the server daemon) and `sirr` (the CLI client). {{ className: 'lead' }}
+
+<Note>
+  `sirrd` and `sirr` are separate binaries. `sirrd` runs the server. `sirr` is the CLI that talks to it. Install both if you are self-hosting; install only `sirr` if you are connecting to an existing server.
+</Note>
+
+---
+
+## Install script {{ id: 'install-script' }}
+
+The fastest way on macOS and Linux. Downloads the latest release binaries directly from GitHub.
+
+```bash
+curl -fsSL https://get.sirr.dev | sh
+```
+
+By default this installs both `sirrd` and `sirr`. Pass a binary name to install only one:
+
+```bash
+curl -fsSL https://get.sirr.dev | sh -s sirr    # CLI only
+curl -fsSL https://get.sirr.dev | sh -s sirrd   # server only
+```
+
+Binaries are installed to `/usr/local/bin` (or `~/.local/bin` if that is not writable).
+
+---
+
+## Homebrew {{ id: 'homebrew' }}
+
+macOS and Linux. Includes `brew services` integration for `sirrd`.
+
+```bash {{ title: 'Tap and install' }}
+brew tap sirrlock/tap
+brew install sirrlock/tap/sirrd   # server daemon
+brew install sirrlock/tap/sirr    # CLI client
+```
+
+```bash {{ title: 'Start as a background service' }}
+brew services start sirrlock/tap/sirrd
+```
+
+```bash {{ title: 'Upgrade' }}
+brew upgrade sirrlock/tap/sirrd sirrlock/tap/sirr
+```
+
+---
+
+## Scoop (Windows) {{ id: 'scoop' }}
+
+```powershell {{ title: 'Add bucket and install' }}
+scoop bucket add sirrlock https://github.com/sirrlock/scoop-bucket
+scoop install sirrlock/sirrd   # server daemon
+scoop install sirrlock/sirr    # CLI client
+```
+
+```powershell {{ title: 'Upgrade' }}
+scoop update sirrd sirr
+```
+
+---
+
+## Docker {{ id: 'docker' }}
+
+The server is available as a multi-arch image (`linux/amd64`, `linux/arm64`). There is no CLI image — use the binary install for that.
+
+```bash {{ title: 'Run' }}
+docker run -d \
+  --name sirrd \
+  -p 39999:39999 \
+  -v ./sirr-data:/data \
+  -e SIRR_MASTER_KEY="$(openssl rand -hex 32)" \
+  -e SIRR_DATA_DIR=/data \
+  sirrlock/sirrd:latest
+```
+
+```yaml {{ title: 'Docker Compose' }}
+services:
+  sirrd:
+    image: sirrlock/sirrd:latest
+    ports:
+      - "39999:39999"
+    volumes:
+      - ./sirr-data:/data
+    environment:
+      SIRR_MASTER_KEY: "${SIRR_MASTER_KEY}"
+      SIRR_DATA_DIR: /data
+    restart: unless-stopped
+```
+
+Images are published to [Docker Hub](https://hub.docker.com/r/sirrlock/sirrd) and [GHCR](https://github.com/sirrlock/sirr/pkgs/container/sirrd).
+
+---
+
+## Binary download {{ id: 'binary-download' }}
+
+Pre-built binaries are attached to every [GitHub release](https://github.com/sirrlock/sirr/releases).
+
+| Platform | sirrd | sirr |
+|---|---|---|
+| macOS (Apple Silicon) | `sirrd-darwin-arm64.tar.gz` | `sirr-darwin-arm64.tar.gz` |
+| macOS (Intel) | `sirrd-darwin-x64.tar.gz` | `sirr-darwin-x64.tar.gz` |
+| Linux (ARM64) | `sirrd-linux-arm64.tar.gz` | `sirr-linux-arm64.tar.gz` |
+| Linux (x64) | `sirrd-linux-x64.tar.gz` | `sirr-linux-x64.tar.gz` |
+| Windows (x64) | `sirrd-windows-x64.zip` | `sirr-windows-x64.zip` |
+
+Extract and move to a directory on your `$PATH`:
+
+```bash
+tar -xzf sirrd-darwin-arm64.tar.gz
+sudo mv sirrd /usr/local/bin/
+```
+
+---
+
+## crates.io {{ id: 'crates-io' }}
+
+Build from source using Cargo. Requires Rust 1.75+.
+
+```bash {{ title: 'Install' }}
+cargo install sirr-server   # installs the sirrd binary
+cargo install sirr          # installs the sirr CLI
+```
+
+```bash {{ title: 'Upgrade' }}
+cargo install sirr-server --force
+cargo install sirr --force
+```
+
+---
+
+## npm {{ id: 'npm' }}
+
+Three packages are published under the `@sirrlock` scope.
+
+### `@sirrlock/node` — Node.js SDK
+
+The zero-dependency TypeScript client for Node.js, Deno, and Bun.
+
+```bash {{ title: 'Install' }}
+npm install @sirrlock/node
+```
+
+```ts {{ title: 'Usage' }}
+import { SirrClient } from '@sirrlock/node'
+
+const sirr = new SirrClient({ token: process.env.SIRR_TOKEN! })
+await sirr.push('API_KEY', 'sk-...', { ttl: 3600, reads: 1 })
+const value = await sirr.get('API_KEY')   // null if burned or expired
+```
+
+### `@sirrlock/sirr` — CLI via npx
+
+Run the Sirr CLI without installing anything.
+
+```bash {{ title: 'npx' }}
+npx @sirrlock/sirr push DB_URL="postgres://..." --reads 1 --ttl 1h
+npx @sirrlock/sirr get DB_URL
+```
+
+### `@sirrlock/mcp` — MCP server
+
+The [Model Context Protocol](https://modelcontextprotocol.io) server for AI agent integration. See the [MCP Server](/mcp) page for setup instructions.
+
+```bash {{ title: 'Install globally' }}
+npm install -g @sirrlock/mcp
+```
+
+---
+
+## Coming soon {{ id: 'coming-soon' }}
+
+These channels are on the roadmap. Star the repo to be notified when they ship.
+
+| Channel | sirrd | sirr |
+|---|---|---|
+| WinGet | `winget install sirrlock.Sirrd` | `winget install sirrlock.Sirr` |
+| AUR | `yay -S sirrd-bin` | `yay -S sirr-bin` |
+| Snap | `snap install sirrd` | `snap install sirr` |
+| Flatpak | `flatpak install flathub dev.sirr.sirrd` | `flatpak install flathub dev.sirr.sirr` |

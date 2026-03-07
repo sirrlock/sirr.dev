@@ -1,0 +1,186 @@
+export const metadata = {
+  title: 'Multi-Team Quickstart',
+  description:
+    'Run multiple isolated teams on one Sirr instance. Each org gets its own principals, secrets, and audit trail. Query across orgs from a single admin view.',
+}
+
+export const sections = [
+  { title: 'Create two orgs', id: 'create-two-orgs' },
+  { title: 'Set up each team', id: 'set-up-each-team' },
+  { title: 'Push team-scoped secrets', id: 'push-team-secrets' },
+  { title: 'Query the audit log', id: 'query-the-audit-log' },
+  { title: 'What is next', id: 'what-is-next' },
+]
+
+# Multi-Team Quickstart
+
+One Sirr instance, two isolated teams. Each org has its own principals and secrets — no cross-contamination. The master key can audit everything from a single view. {{ className: 'lead' }}
+
+<Note>
+  You need a running Sirr instance with the master key. If you have not installed Sirr yet, start with the [Solo Dev Quickstart](/quickstart/solo-dev).
+</Note>
+
+## Create two orgs
+
+Create an org for each team. The master key can create orgs; only org admins can manage secrets within their org.
+
+```bash {{ title: 'Create platform-team org' }}
+export SIRR_SERVER=http://localhost:39999
+
+curl -X POST $SIRR_SERVER/orgs \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "platform-team"}'
+
+# Save:
+export PLATFORM_ORG=org_platform_xxxx
+```
+
+```bash {{ title: 'Create product-team org' }}
+curl -X POST $SIRR_SERVER/orgs \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "product-team"}'
+
+export PRODUCT_ORG=org_product_yyyy
+```
+
+## Set up each team
+
+Create an admin principal in each org. This principal manages the org's secrets and invites other members.
+
+```bash {{ title: 'Create platform-team admin' }}
+curl -X POST $SIRR_SERVER/orgs/$PLATFORM_ORG/principals \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "platform-admin", "role": "admin"}'
+
+# Create a key for this principal
+curl -X POST $SIRR_SERVER/orgs/$PLATFORM_ORG/principals/<platform-admin-id>/keys \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "platform-admin-key"}'
+
+export PLATFORM_ADMIN_KEY=sirr_pk_platform_XXXX
+```
+
+```bash {{ title: 'Create product-team admin' }}
+curl -X POST $SIRR_SERVER/orgs/$PRODUCT_ORG/principals \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "product-admin", "role": "admin"}'
+
+curl -X POST $SIRR_SERVER/orgs/$PRODUCT_ORG/principals/<product-admin-id>/keys \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "product-admin-key"}'
+
+export PRODUCT_ADMIN_KEY=sirr_pk_product_YYYY
+```
+
+## Push team-scoped secrets
+
+Each team pushes secrets into their own org. Principals from `platform-team` cannot see `product-team` secrets and vice versa — isolation is enforced at the org boundary.
+
+```bash {{ title: 'platform-team pushes infra secrets' }}
+# Platform team stores their Terraform cloud token
+curl -X POST $SIRR_SERVER/orgs/$PLATFORM_ORG/secrets \
+  -H "Authorization: Bearer $PLATFORM_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "infra/TF_CLOUD_TOKEN",
+    "value": "tfc-XXXXXXXXXXXXXXXXXXXXXXXX",
+    "delete": false
+  }'
+
+# Platform team stores their registry credentials
+curl -X POST $SIRR_SERVER/orgs/$PLATFORM_ORG/secrets \
+  -H "Authorization: Bearer $PLATFORM_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "infra/REGISTRY_PASS",
+    "value": "my-registry-password",
+    "delete": false
+  }'
+```
+
+```bash {{ title: 'product-team pushes app secrets' }}
+# Product team stores their Stripe key
+curl -X POST $SIRR_SERVER/orgs/$PRODUCT_ORG/secrets \
+  -H "Authorization: Bearer $PRODUCT_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "app/STRIPE_SECRET_KEY",
+    "value": "your-stripe-secret-key",
+    "max_reads": 10,
+    "delete": false
+  }'
+
+# Product team stores their Datadog API key
+curl -X POST $SIRR_SERVER/orgs/$PRODUCT_ORG/secrets \
+  -H "Authorization: Bearer $PRODUCT_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "app/DATADOG_API_KEY",
+    "value": "dda-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "delete": false
+  }'
+```
+
+Confirm isolation — platform admin cannot see product secrets:
+
+```bash {{ title: 'Isolation check' }}
+curl $SIRR_SERVER/orgs/$PRODUCT_ORG/secrets/app/STRIPE_SECRET_KEY \
+  -H "Authorization: Bearer $PLATFORM_ADMIN_KEY"
+# → 403 Forbidden  (different org)
+```
+
+## Query the audit log
+
+The master key can query audit logs for any org. This gives you a unified compliance view across the entire instance.
+
+```bash {{ title: 'Audit all reads in platform-team (last 24h)' }}
+curl "$SIRR_SERVER/orgs/$PLATFORM_ORG/audit?action=secret.read&since=$(date -d '24 hours ago' +%s)" \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY"
+```
+
+```bash {{ title: 'Audit all secret operations in product-team' }}
+curl "$SIRR_SERVER/orgs/$PRODUCT_ORG/audit?limit=100" \
+  -H "Authorization: Bearer $SIRR_MASTER_KEY"
+```
+
+```json {{ title: 'Example audit entry' }}
+{
+  "entries": [
+    {
+      "id": "01HX...",
+      "action": "secret.read",
+      "key": "app/STRIPE_SECRET_KEY",
+      "principal": "product-admin",
+      "timestamp": 1700003600,
+      "metadata": {
+        "read_count": 1,
+        "max_reads": 10
+      }
+    }
+  ]
+}
+```
+
+<Note>
+  Audit entries never contain secret values — only metadata about who accessed what and when. Use `action=secret.read` filters during incident response to trace which principal read a compromised key.
+</Note>
+
+Each team can also query their own org's audit log using their admin principal key — they only see their org.
+
+```bash {{ title: 'product-team self-audits (only sees their org)' }}
+curl "$SIRR_SERVER/orgs/$PRODUCT_ORG/audit" \
+  -H "Authorization: Bearer $PRODUCT_ADMIN_KEY"
+```
+
+## What is next
+
+- [Audit Logs](/audit-logs) — full filter reference (by action, key prefix, time range)
+- [API Keys](/api-keys) — scoped API keys with prefix restrictions within an org
+- [Webhooks](/webhooks) — receive real-time events when secrets are read or burned
+- [Self-Hosting](/self-hosting) — production deployment with TLS, backups, and monitoring

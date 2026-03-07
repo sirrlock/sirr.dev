@@ -1,0 +1,112 @@
+export const metadata = {
+  title: 'Security',
+  description:
+    'Security architecture of Sirr: threat model, encryption at rest with ChaCha20Poly1305 and Argon2id, key isolation, constant-time auth, and known limitations.',
+}
+
+export const sections = [
+  { title: 'Threat model', id: 'threat-model' },
+  { title: 'Encryption at rest', id: 'encryption-at-rest' },
+  { title: 'Key isolation', id: 'key-isolation' },
+  { title: 'Metadata-only listing', id: 'metadata-only-listing' },
+  { title: 'No telemetry', id: 'no-telemetry' },
+  { title: 'Constant-time auth', id: 'constant-time-auth' },
+  { title: 'Limitations', id: 'limitations' },
+]
+
+# Security
+
+Sirr is built around a simple principle: secrets should be encrypted at rest, exposed only when explicitly requested, and destroyed as soon as possible. This page documents the security architecture and its boundaries. {{ className: 'lead' }}
+
+## Threat model {{ id: 'threat-model' }}
+
+Sirr protects against the following threats:
+
+- **Secrets at rest on disk** — All secret values are encrypted before they are written to the embedded database. An attacker with read access to the database file cannot recover plaintext values without the master key and salt.
+- **Exposure window** — TTL and max-read limits ensure secrets self-destruct after a defined time or number of accesses, minimizing the window during which a secret exists.
+- **Accidental listing** — The list endpoint returns only metadata (keys, timestamps, counters). Secret values are never included in list responses.
+
+Sirr is **not** a replacement for network security, host hardening, or access control. It is one layer in a defense-in-depth strategy.
+
+---
+
+## Encryption at rest {{ id: 'encryption-at-rest' }}
+
+Every secret value is encrypted before being written to the redb database.
+
+### Key derivation: Argon2id
+
+The encryption key is derived from your `SIRR_MASTER_KEY` using Argon2id with the following parameters:
+
+| Parameter | Value |
+| --- | --- |
+| Memory | 64 MiB |
+| Iterations | 3 |
+| Parallelism | 4 |
+| Output length | 32 bytes (256 bits) |
+
+The salt is randomly generated on first startup and stored in `sirr.salt`. The derived key is held in memory for the lifetime of the server process and is never written to disk.
+
+### Symmetric encryption: ChaCha20Poly1305
+
+Each secret is encrypted with ChaCha20Poly1305 (RFC 8439), an authenticated encryption algorithm:
+
+| Parameter | Value |
+| --- | --- |
+| Key size | 256 bits |
+| Nonce size | 96 bits (12 bytes) |
+| Authentication | Poly1305 MAC |
+
+ChaCha20Poly1305 provides both confidentiality and integrity. Any tampering with the ciphertext is detected and rejected during decryption.
+
+---
+
+## Key isolation {{ id: 'key-isolation' }}
+
+Each secret gets its own randomly generated 12-byte nonce at creation time. This nonce is stored alongside the ciphertext in the database. Because every record uses a unique nonce, there is no nonce reuse even when encrypting many secrets with the same derived key.
+
+### Memory safety
+
+Sirr uses `ZeroizeOnDrop` for all key material held in memory. When the encryption key or any intermediate key material goes out of scope, the memory is overwritten with zeros before being freed. This reduces the risk of key material lingering in memory after use.
+
+---
+
+## Metadata-only listing {{ id: 'metadata-only-listing' }}
+
+The `GET /secrets` endpoint returns only metadata for each secret:
+
+- `key` — the secret identifier
+- `created_at` — creation timestamp
+- `expires_at` — expiration timestamp (if TTL was set)
+- `max_reads` — read limit (if set)
+- `read_count` — how many times the secret has been read
+
+Secret values are never included in list responses. To retrieve a value, you must explicitly call `GET /secrets/:key`, which increments the read counter and may destroy the secret if the read limit is reached.
+
+---
+
+## No telemetry {{ id: 'no-telemetry' }}
+
+Sirr contains no telemetry, no analytics, no phone-home behavior, and no crash reporting. The server makes no outbound network connections of any kind.
+
+<Note>
+  The only exception is license validation. If you set `SIRR_LICENSE_KEY`, the server validates it against the licensing API at startup. This is the only outbound request Sirr ever makes, and it can be avoided entirely by staying within the free tier.
+</Note>
+
+---
+
+## Constant-time auth {{ id: 'constant-time-auth' }}
+
+Bearer token comparison uses a constant-time equality function. This prevents timing attacks where an attacker could measure response times to incrementally guess the master key one character at a time.
+
+---
+
+## Limitations {{ id: 'limitations' }}
+
+Sirr does not protect against the following scenarios:
+
+- **Compromised host OS** — If an attacker has root access to the host, they can read process memory, intercept the master key, or modify the binary. Sirr assumes a trusted execution environment.
+- **Network sniffing without TLS** — Sirr does not terminate TLS. If you run Sirr without a TLS-terminating reverse proxy, secrets are transmitted in plaintext over the network. Always use TLS in production.
+- **Physical access to the server** — An attacker with physical access can perform cold-boot attacks, read disk contents, or install keyloggers. Standard physical security practices apply.
+- **Side-channel attacks** — While token comparison is constant-time, Sirr does not make broader guarantees about side-channel resistance (cache timing, power analysis, etc.).
+- **Denial of service** — Sirr does not include built-in rate limiting. Use a reverse proxy or firewall to protect against abuse.

@@ -1,0 +1,33 @@
+# sirr.dev — Sirr Documentation Site
+
+Documentation website for Sirr — the ephemeral secret vault.
+Next.js + MDX, 10 languages, deployed at https://sirr.dev
+
+## Pages
+
+- / — Home
+- /quickstart — Get started in 5 minutes
+- /quickstart/single-user — Single-user self-hosted setup
+- /quickstart/multi-team — Multi-tenant org setup
+- /quickstart/ai-assistant — MCP server setup for Claude
+- /api — HTTP API reference
+- /cli — CLI reference
+- /sdks — SDK overview (Node.js, Python, .NET)
+- /mcp — MCP server reference
+- /self-hosting — Deployment and configuration
+- /security — Security model and encryption
+- /licensing — License tiers and keys
+- /changelog — Release history
+
+## Languages
+
+English (en), Arabic (ar, RTL), Japanese (ja), Spanish (es), French (fr),
+German (de), Portuguese (pt), Chinese (zh), Korean (ko), Hindi (hi)
+
+## Stack
+
+Next.js 16, MDX, Tailwind CSS 4, FlexSearch (client-side search), Framer Motion
+
+## Source
+
+github.com/sirrlock/sirr.dev

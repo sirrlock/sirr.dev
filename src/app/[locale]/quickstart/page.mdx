@@ -1,0 +1,41 @@
+export const metadata = {
+  title: 'Quickstarts',
+  description:
+    'Get started with Sirr. Choose the quickstart that matches your setup: solo developer, DevOps team, or multi-team with audit.',
+}
+
+export const sections = []
+
+# Quickstarts
+
+Pick the path that matches your setup. Each quickstart is self-contained — install to running in under five minutes. {{ className: 'lead' }}
+
+<div className="not-prose mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
+  <div className="rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800">
+    <h2 className="text-base font-semibold text-zinc-900 dark:text-white">Solo Developer</h2>
+    <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+      Local instance, no org. Install the server, push a secret, retrieve it, then wire up the MCP server so Claude can access your vault.
+    </div>
+    <div className="mt-4">
+      <Button href="/quickstart/solo-dev" variant="text" arrow="right">Solo Dev</Button>
+    </div>
+  </div>
+  <div className="rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800">
+    <h2 className="text-base font-semibold text-zinc-900 dark:text-white">DevOps Team</h2>
+    <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+      One org, two patchable secrets — a Claude API key and a GitHub PAT — each with a dedicated principal that can rotate the value without losing the key name.
+    </div>
+    <div className="mt-4">
+      <Button href="/quickstart/devops" variant="text" arrow="right">DevOps</Button>
+    </div>
+  </div>
+  <div className="rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800">
+    <h2 className="text-base font-semibold text-zinc-900 dark:text-white">Multi-Team</h2>
+    <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+      Multiple orgs with isolated principals, prefix-scoped access, and org-level audit logs to track every secret operation across teams.
+    </div>
+    <div className="mt-4">
+      <Button href="/quickstart/multi-team" variant="text" arrow="right">Multi-Team</Button>
+    </div>
+  </div>
+</div>
