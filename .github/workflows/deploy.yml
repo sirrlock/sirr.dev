@@ -40,7 +40,7 @@ jobs:
           script: |
             echo "$GHCR_PAT" | docker login ghcr.io -u github-actions --password-stdin
             cd ~/services/sirr
-            docker compose pull
+            docker compose pull sirr-web
             docker compose up -d --remove-orphans
         env:
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
