@@ -32,13 +32,18 @@ The `sirr` CLI is a single binary for interacting with a `sirrd` server. It talk
 
 Configure the CLI with environment variables:
 
-- `SIRR_SERVER` -- the URL of your Sirr instance (default `https://sirrlock.com`). Zero-config cloud out of the box.
-- `SIRR_TOKEN` -- the bearer token matching the server's `SIRR_MASTER_KEY`
+- `SIRR_SERVER` -- the URL of your Sirr instance (default `https://sirr.sirrlock.com`). Zero-config cloud out of the box.
+- `SIRR_TOKEN` -- bearer token: your principal key (Cloud) or `SIRR_MASTER_API_KEY` value (self-hosted)
 - `SIRR_ORG` -- default organization ID for org-scoped commands
 
-```bash {{ title: 'Environment setup' }}
-export SIRR_SERVER="https://sirrlock.com"
-export SIRR_TOKEN="your-master-key"
+```bash {{ title: 'Environment setup — Cloud' }}
+export SIRR_TOKEN="your-principal-key"
+export SIRR_ORG="your-org-id"
+```
+
+```bash {{ title: 'Environment setup — Self-Hosted' }}
+export SIRR_SERVER="http://localhost:39999"
+export SIRR_TOKEN="your-master-api-key"
 ```
 
 <Note>
@@ -77,7 +82,7 @@ Push an anonymous (public) secret to the server. Accepts a raw value — no key 
       --ttl 1h \
       --reads 1
     # → id:  a3f8...7c2d
-    # → url: https://sirrlock.com/s/a3f8...7c2d
+    # → url: https://sirr.sirrlock.com/s/a3f8...7c2d
     ```
 
   </Col>
@@ -616,7 +621,7 @@ View your connection info and principal identity. Works anonymously (shows conne
     ```bash {{ title: 'Example' }}
     # Show current identity (works even without auth)
     sirr me
-    # Server:    https://sirrlock.com
+    # Server:    https://sirr.sirrlock.com
     # Principal: prin_e5f6a7b8 (ci-bot)
     # Org:       org_a1b2c3d4
     # Role:      writer

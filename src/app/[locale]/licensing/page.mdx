@@ -1,12 +1,13 @@
 export const metadata = {
   title: 'Licensing & Pricing',
   description:
-    'Sirr pricing: one product, one price, self-hosted or SaaS. BSL 1.1 license, free Community tier, and Apache 2.0 conversion in 2028.',
+    'Sirr pricing for Cloud (per-seat) and Self-Hosted (per-instance). BSL 1.1 license, free Community tier, and Apache 2.0 conversion in 2028.',
 }
 
 export const sections = [
-  { title: 'Pricing', id: 'pricing' },
-  { title: 'Self-hosted vs SaaS', id: 'self-hosted-vs-saas' },
+  { title: 'Cloud pricing', id: 'cloud-pricing' },
+  { title: 'Self-hosted pricing', id: 'self-hosted-pricing' },
+  { title: 'Cloud vs Self-Hosted', id: 'cloud-vs-self-hosted' },
   { title: 'Business Source License', id: 'business-source-license' },
   { title: 'License keys', id: 'license-keys' },
   { title: 'Apache 2.0 conversion', id: 'apache-conversion' },
@@ -15,26 +16,25 @@ export const sections = [
 
 # Licensing & Pricing
 
-One product, one price. Same tiers whether you self-host or use Sirr as a managed service. {{ className: 'lead' }}
+Two products, two pricing models. Sirr Cloud is billed per seat. Sirr Self-Hosted is billed per instance. Both include the full feature set. {{ className: 'lead' }}
 
 ---
 
-## Pricing {{ id: 'pricing' }}
+## Cloud pricing (sirrlock.com) {{ id: 'cloud-pricing' }}
 
-Every plan includes all features — encryption, TTL, max-read limits, audit logs, webhooks, and the full API. Tiers are based on organization and principal counts.
+Managed service — zero infrastructure. Billed per seat per month.
 
-| | **Solo** | **Solo+** | **Team** | **Business** |
+| | **Free** | **Pro** | **Team** | **Enterprise** |
 | --- | --- | --- | --- | --- |
-| **Price** | Free | $199/year | $499/year | $1,999/year |
-| **Organizations** | 1 | 1 | 1 | Unlimited |
-| **Principals** | 1 | 5 | Unlimited | Unlimited |
-| **Secrets** | Unlimited | Unlimited | Unlimited | Unlimited |
+| **Price** | Free | $8/user/mo | $15/user/mo | Custom |
+| **Users** | 1 | Unlimited | Unlimited | Unlimited |
+| **Organizations** | 1 | 1 | Unlimited | Unlimited |
+| **Secrets** | 100 | Unlimited | Unlimited | Unlimited |
+| **Audit logs** | 7 days | 30 days | 90 days | Custom |
 | **Support** | Community | Email | Priority | Dedicated + SLA |
-| **Audit API** | Yes | Yes | Yes | Yes |
-| **Webhooks** | Yes | Yes | Yes | Yes |
 | **Custom roles** | — | Yes | Yes | Yes |
+| **SSO / SAML** | — | — | Yes | Yes |
 | **Custom terms** | — | — | — | Yes |
-| **Invoice billing** | — | — | — | Yes |
 
 <div className="not-prose mt-4">
   <Button href="https://sirrlock.com/pricing" arrow="right">
@@ -42,15 +42,33 @@ Every plan includes all features — encryption, TTL, max-read limits, audit log
   </Button>
 </div>
 
+---
+
+## Self-hosted pricing {{ id: 'self-hosted-pricing' }}
+
+Run `sirrd` on your own infrastructure. Billed per instance per year.
+
+| | **Community** | **Standard** | **Professional** | **Enterprise** |
+| --- | --- | --- | --- | --- |
+| **Price** | Free | $499/yr/instance | $1,499/yr/instance | Custom |
+| **Secrets** | 100 per instance | Unlimited | Unlimited | Unlimited |
+| **Organizations** | 1 | Unlimited | Unlimited | Unlimited |
+| **Principals** | 1 | Unlimited | Unlimited | Unlimited |
+| **Support** | Community | Email | Priority | Dedicated + SLA |
+| **Audit API** | Yes | Yes | Yes | Yes |
+| **Webhooks** | Yes | Yes | Yes | Yes |
+| **Custom roles** | — | Yes | Yes | Yes |
+| **Custom terms** | — | — | — | Yes |
+
 <Note>
   Non-production use is always free, regardless of the number of secrets. See [below](#non-production-use) for details.
 </Note>
 
 ---
 
-## Self-hosted vs SaaS {{ id: 'self-hosted-vs-saas' }}
+## Cloud vs Self-Hosted {{ id: 'cloud-vs-self-hosted' }}
 
-Same price, different trade-offs. Pick what fits your infrastructure.
+Different products, different trade-offs. Pick what fits your infrastructure.
 
 <Row>
   <Col>
@@ -63,25 +81,23 @@ Same price, different trade-offs. Pick what fits your infrastructure.
     - Works air-gapped and offline
     - Full control over upgrades and configuration
     - You manage uptime, backups, and TLS
-    - Limits exist in the license terms but are not enforced by the binary
+    - Priced per instance, not per seat
 
   </Col>
   <Col>
 
-    ### SaaS (sirrlock.com)
+    ### Cloud (sirrlock.com)
 
     We host it for you. Team management and billing included.
 
     - Zero infrastructure to manage
     - Team and organization management UI
     - Web-based audit dashboard
-    - Automatic updates and uptime SLA (Business+)
-    - Limits enforced by the platform
+    - Automatic updates and uptime SLA (Team+)
+    - Priced per seat, not per instance
 
   </Col>
 </Row>
-
-Your license key works on both. Use SaaS for dev/staging and self-hosted in your production VPC — same key, same tier, same price.
 
 ---
 
@@ -126,7 +142,7 @@ docker run -d \
   --name sirrd \
   -p 39999:39999 \
   -v ./sirrd-data:/data \
-  -e SIRR_MASTER_KEY="your-master-key" \
+  -e SIRR_MASTER_API_KEY="your-api-key" \
   -e SIRR_LICENSE_KEY="sirr_lic_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2" \
   -e SIRR_DATA_DIR=/data \
   ghcr.io/sirrlock/sirrd

@@ -61,9 +61,9 @@ The fastest way to integrate with Sirr is through one of the official client lib
     })
     console.log(url) // shareable URL
 
-    // Retrieve by ID
+    // Retrieve by ID — returns the value string, or null
     const secret = await sirr.get(id)
-    console.log(secret.value) // "s3cret!"
+    console.log(secret) // "s3cret!"
     ```
 
   </Col>
@@ -162,9 +162,9 @@ The fastest way to integrate with Sirr is through one of the official client lib
     });
     Console.WriteLine(result.Url); // shareable URL
 
-    // Retrieve by ID
-    var secret = await client.GetAsync(result.Id);
-    Console.WriteLine(secret.Value); // "s3cret!"
+    // Retrieve by ID — returns the value string, or null
+    string? secret = await client.GetAsync(result.Id);
+    Console.WriteLine(secret); // "s3cret!"
     ```
 
   </Col>
@@ -195,7 +195,7 @@ The fastest way to integrate with Sirr is through one of the official client lib
   <Col>
 
     ```bash {{ title: 'CLI usage' }}
-    # Default server: https://sirrlock.com (zero-config)
+    # Default server: https://sirr.sirrlock.com (zero-config)
     export SIRR_TOKEN=your-master-key
 
     # Push a public dead drop
@@ -270,9 +270,9 @@ var client = new SirrClient(new SirrOptions
 // Set a named secret in org (rejects duplicates with SecretExistsError)
 const { key, id } = await sirr.set('db/password', 's3cret!', { ttl: 3600, reads: 3 })
 
-// Retrieve from org bucket by key
-const secret = await sirr.get('db/password')
-console.log(secret.value) // "s3cret!"
+// Retrieve from org bucket by key — returns the value string, or null
+const value = await sirr.get('db/password')
+console.log(value) // "s3cret!"
 ```
 
 ```python {{ title: 'Python' }}
@@ -292,9 +292,9 @@ await client.SetAsync("db/password", "s3cret!", new SetOptions
     Reads = 3,
 });
 
-// Retrieve from org bucket by key
-var secret = await client.GetAsync("db/password");
-Console.WriteLine(secret.Value); // "s3cret!"
+// Retrieve from org bucket by key — returns the value string, or null
+string? value = await client.GetAsync("db/password");
+Console.WriteLine(value); // "s3cret!"
 ```
 
 </CodeGroup>

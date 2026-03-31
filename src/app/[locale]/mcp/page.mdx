@@ -48,14 +48,36 @@ After installation, the `sirr-mcp` binary is available on your `PATH`.
 
 Add Sirr to your MCP configuration file. Most AI tools look for `.mcp.json` in your project root or home directory.
 
-```json {{ title: '.mcp.json' }}
+### Sirr Cloud (recommended)
+
+If you use [Sirr Cloud](https://sirrlock.com), no `SIRR_SERVER` is needed — the MCP server defaults to `https://sirr.sirrlock.com`. Use your principal key as the token.
+
+```json {{ title: '.mcp.json — Sirr Cloud' }}
+{
+  "mcpServers": {
+    "sirr": {
+      "command": "sirr-mcp",
+      "env": {
+        "SIRR_TOKEN": "your-principal-key",
+        "SIRR_ORG": "your-org-id"
+      }
+    }
+  }
+}
+```
+
+### Self-Hosted
+
+If you run your own `sirrd` instance, set `SIRR_SERVER` to your server's address and use the master API key as the token.
+
+```json {{ title: '.mcp.json — Self-Hosted' }}
 {
   "mcpServers": {
     "sirr": {
       "command": "sirr-mcp",
       "env": {
         "SIRR_SERVER": "http://localhost:39999",
-        "SIRR_TOKEN": "your-token"
+        "SIRR_TOKEN": "your-master-api-key"
       }
     }
   }
@@ -69,10 +91,13 @@ Add Sirr to your MCP configuration file. Most AI tools look for `.mcp.json` in y
 
     <Properties>
       <Property name="SIRR_SERVER" type="string">
-        URL of the Sirr server. Defaults to `http://localhost:39999`.
+        URL of the Sirr server. Defaults to `https://sirr.sirrlock.com` (Sirr Cloud). Set to `http://localhost:39999` for local self-hosted instances.
       </Property>
       <Property name="SIRR_TOKEN" type="string">
-        Bearer token for authentication. Must match the server's `SIRR_MASTER_KEY` exactly.
+        Bearer token for authentication. For Cloud users, this is your principal key from [sirrlock.com](https://sirrlock.com). For self-hosted, this is the value of `SIRR_MASTER_API_KEY` on the server.
+      </Property>
+      <Property name="SIRR_ORG" type="string">
+        Organization ID for multi-tenant mode. When set, all secret, audit, and webhook operations are scoped to this org. Required for Cloud users; optional for self-hosted.
       </Property>
     </Properties>
 
@@ -90,61 +115,21 @@ Add Sirr to your MCP configuration file. Most AI tools look for `.mcp.json` in y
   </Col>
   <Col>
 
-    ```bash {{ title: 'Verify the MCP server' }}
-    # Test that the MCP server can reach Sirr
+    ```bash {{ title: 'Verify — Cloud' }}
+    SIRR_TOKEN=your-principal-key \
+    SIRR_ORG=your-org-id \
+    sirr-mcp --health
+    ```
+
+    ```bash {{ title: 'Verify — Self-Hosted' }}
     SIRR_SERVER=http://localhost:39999 \
-    SIRR_TOKEN=your-token \
+    SIRR_TOKEN=your-master-api-key \
     sirr-mcp --health
     ```
 
     ```bash {{ title: 'Print installed version' }}
     sirr-mcp --version
     # sirr-mcp 0.1.0
-    ```
-
-  </Col>
-</Row>
-
----
-
-## Multi-tenant configuration
-
-To use the MCP server with org-scoped secrets, add the `SIRR_ORG` environment variable. When set, all secret operations are scoped to that organization and the token must be a principal key (not the master key).
-
-```json {{ title: '.mcp.json with multi-tenant' }}
-{
-  "mcpServers": {
-    "sirr": {
-      "command": "sirr-mcp",
-      "env": {
-        "SIRR_SERVER": "http://localhost:39999",
-        "SIRR_TOKEN": "your-principal-key",
-        "SIRR_ORG": "your-org-id"
-      }
-    }
-  }
-}
-```
-
-<Row>
-  <Col>
-
-    ### Additional environment variable
-
-    <Properties>
-      <Property name="SIRR_ORG" type="string">
-        Organization ID for multi-tenant mode. When set, all secret, audit, and webhook operations are scoped to this org. The token must be a principal key with appropriate permissions.
-      </Property>
-    </Properties>
-
-  </Col>
-  <Col>
-
-    ```bash {{ title: 'Verify multi-tenant config' }}
-    SIRR_SERVER=http://localhost:39999 \
-    SIRR_TOKEN=your-principal-key \
-    SIRR_ORG=your-org-id \
-    sirr-mcp --health
     ```
 
   </Col>
@@ -457,7 +442,7 @@ User:  Store this API key in Sirr with a 2-hour TTL: sk-live-abc123
 
 AI:    [Calls push_secret(value: "sk-live-abc123", ttl_seconds: 7200)]
 
-       Done. Secret stored with ID a3f8...7c2d. URL: https://sirrlock.com/s/a3f8...7c2d
+       Done. Secret stored with ID a3f8...7c2d. URL: https://sirr.sirrlock.com/s/a3f8...7c2d
        It will self-destruct in 2 hours.
 ```
 
@@ -491,7 +476,7 @@ AI:    [Calls prune_secrets()]
 
 ### Token mismatch (401)
 
-`SIRR_TOKEN` in your `.mcp.json` must equal `SIRR_MASTER_KEY` on the Sirr server exactly. A single extra character or newline will cause every authenticated tool call to fail.
+Your `SIRR_TOKEN` must be a valid credential. For Cloud users, this is a principal key from [sirrlock.com](https://sirrlock.com). For self-hosted users, this must match the `SIRR_MASTER_API_KEY` on the server exactly. A single extra character or newline will cause every authenticated tool call to fail.
 
 **Diagnose:** `sirr-mcp --health` will show a 401 error if the token is wrong. See [sirr.dev/errors#401](/errors#401).
 

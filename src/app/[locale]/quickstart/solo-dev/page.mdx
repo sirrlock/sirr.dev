@@ -17,7 +17,11 @@ export const sections = [
 No org, no team, no ceremony. Install the server locally, push a secret, retrieve it, and wire Claude up to the vault — all in under five minutes. {{ className: 'lead' }}
 
 <Note>
-  Sirr requires a `SIRR_MASTER_KEY` to start. This key authenticates all API calls and seeds encryption. Generate one with `openssl rand -hex 32` and keep it out of git.
+  **Using Sirr Cloud?** Skip the install — go straight to [sirrlock.com](https://sirrlock.com) to sign up, get your principal key, and start pushing secrets immediately.
+</Note>
+
+<Note>
+  Sirr requires a `SIRR_MASTER_ENCRYPTION_KEY` for encrypting secrets and optionally a `SIRR_MASTER_API_KEY` for API authentication. Generate one with `openssl rand -hex 32` and keep it out of git.
 </Note>
 
 ## Install
@@ -29,7 +33,7 @@ docker run -d \
   --name sirrd \
   -p 39999:39999 \
   -v ./sirr-data:/data \
-  -e SIRR_MASTER_KEY="$(openssl rand -hex 32)" \
+  -e SIRR_MASTER_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
   -e SIRR_DATA_DIR=/data \
   ghcr.io/sirrlock/sirrd
 ```
@@ -55,7 +59,7 @@ curl -fsSL https://get.sirr.dev | sh
 If you installed via Homebrew or binary, start the server manually and export the key:
 
 ```bash {{ title: 'Start the server' }}
-export SIRR_MASTER_KEY="$(openssl rand -hex 32)"
+export SIRR_MASTER_ENCRYPTION_KEY="$(openssl rand -hex 32)"
 sirrd serve
 # → Server listening on http://localhost:39999
 # → Master key: <your-key>   ← save this
@@ -72,19 +76,19 @@ sirr push "postgres://user:pass@db:5432/myapp" \
   --reads 1 \
   --ttl 1h
 # → id:  a3f8...7c2d
-# → url: https://sirrlock.com/s/a3f8...7c2d
+# → url: https://sirr.sirrlock.com/s/a3f8...7c2d
 ```
 
 ```bash {{ title: 'cURL' }}
 curl -X POST http://localhost:39999/secrets \
-  -H "Authorization: Bearer $SIRR_MASTER_KEY" \
+  -H "Authorization: Bearer $SIRR_MASTER_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "value": "postgres://user:pass@db:5432/myapp",
     "max_reads": 1,
     "ttl_seconds": 3600
   }'
-# → {"id": "a3f8...7c2d", "url": "https://sirrlock.com/s/a3f8...7c2d"}
+# → {"id": "a3f8...7c2d", "url": "https://sirr.sirrlock.com/s/a3f8...7c2d"}
 ```
 
 </CodeGroup>
@@ -101,7 +105,7 @@ sirr get a3f8...7c2d
 
 ```bash {{ title: 'cURL' }}
 curl http://localhost:39999/secrets/a3f8...7c2d \
-  -H "Authorization: Bearer $SIRR_MASTER_KEY"
+  -H "Authorization: Bearer $SIRR_MASTER_API_KEY"
 ```
 
 </CodeGroup>
@@ -125,7 +129,7 @@ Add a `.mcp.json` in your project root (or home directory):
       "command": "sirr-mcp",
       "env": {
         "SIRR_SERVER": "http://localhost:39999",
-        "SIRR_TOKEN": "<your-SIRR_MASTER_KEY>"
+        "SIRR_TOKEN": "<your-SIRR_MASTER_API_KEY>"
       }
     }
   }
@@ -136,7 +140,7 @@ Verify the connection:
 
 ```bash {{ title: 'Health check' }}
 SIRR_SERVER=http://localhost:39999 \
-SIRR_TOKEN=$SIRR_MASTER_KEY \
+SIRR_TOKEN=$SIRR_MASTER_API_KEY \
 sirr-mcp --health
 # → OK
 ```

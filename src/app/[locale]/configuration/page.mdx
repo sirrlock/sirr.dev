@@ -20,11 +20,14 @@ Sirr is configured entirely through environment variables. No config files, no C
 These variables control the Sirr server process.
 
 <Properties>
-  <Property name="SIRR_MASTER_KEY" type="string" required>
-    The master key used for API authentication (constant-time comparison against the `Authorization: Bearer` header). Must be set before the server starts. Use `openssl rand -hex 32` to generate a strong key. Separate from the internal encryption key, which is stored in `sirr.key` in the data directory. See also: `SIRR_MASTER_KEY_FILE` for file-based delivery.
+  <Property name="SIRR_MASTER_API_KEY" type="string">
+    Bearer token used for API authentication (constant-time comparison against the `Authorization: Bearer` header). Use `openssl rand -hex 32` to generate a strong key. If not set, `sirrd` auto-generates a random key on each startup and prints it in a security notice.
   </Property>
-  <Property name="SIRR_MASTER_KEY_FILE" type="string">
-    Path to a file containing the master key. Takes precedence over `SIRR_MASTER_KEY` when both are set. Preferred for production deployments — env vars are visible via `docker inspect` and `/proc`. Example: `/run/secrets/master.key`.
+  <Property name="SIRR_MASTER_ENCRYPTION_KEY" type="string" required>
+    The master encryption key used to derive per-secret encryption keys. Must be set before the server starts. Use `openssl rand -hex 32` to generate a strong key. See also: `SIRR_MASTER_ENCRYPTION_KEY_FILE` for file-based delivery.
+  </Property>
+  <Property name="SIRR_MASTER_ENCRYPTION_KEY_FILE" type="string">
+    Path to a file containing the master encryption key. Takes precedence over `SIRR_MASTER_ENCRYPTION_KEY` when both are set. Preferred for production deployments — env vars are visible via `docker inspect` and `/proc`. Example: `/run/secrets/encryption.key`.
   </Property>
   <Property name="SIRR_LICENSE_KEY" type="string">
     License key for running more than 100 secrets per instance. Format: `sirr_lic_<40-hex-chars>`. Validated against `sirrlock.com` on startup. Without a valid license, the server returns `402 Payment Required` when the 101st secret is pushed. Free for up to 100 secrets.
@@ -65,9 +68,6 @@ These variables control the Sirr server process.
   <Property name="SIRR_AUTOINIT" type="boolean" default="false">
     When `true` (or when the `--init` flag is passed to `sirrd serve`), the server automatically creates a default organization, an admin principal, and two temporary bootstrap keys on first boot. The bootstrap keys are printed to stdout and are intended for initial setup only.
   </Property>
-  <Property name="SIRR_API_KEY" type="string">
-    Bearer token required for all API write operations. If not set, sirrd auto-generates a random key on each startup and prints it in a security notice. Set this explicitly in production to ensure a stable, persistent key.
-  </Property>
   <Property name="SIRR_CORS_ORIGINS" type="string">
     Comma-separated list of origins allowed in CORS responses. When unset, CORS headers are not sent. Example: `https://app.example.com,https://dashboard.example.com`.
   </Property>
@@ -98,7 +98,7 @@ These variables control the Sirr server process.
 </Properties>
 
 <Note>
-  `SIRR_MASTER_KEY` is the only required variable. All others have sensible defaults. Never commit your master key to version control.
+  `SIRR_MASTER_ENCRYPTION_KEY` (or `SIRR_MASTER_ENCRYPTION_KEY_FILE`) is the only required variable. All others have sensible defaults. Never commit your keys to version control.
 </Note>
 
 ## Client environment variables
@@ -106,11 +106,11 @@ These variables control the Sirr server process.
 The Sirr CLI and official SDKs read these variables to connect to a Sirr server.
 
 <Properties>
-  <Property name="SIRR_SERVER" type="string" default="https://sirrlock.com">
-    The base URL of the Sirr server to connect to. Defaults to the managed cloud service at `https://sirrlock.com` for zero-config operation. Set to `http://localhost:39999` for local self-hosted instances.
+  <Property name="SIRR_SERVER" type="string" default="https://sirr.sirrlock.com">
+    The base URL of the Sirr server to connect to. Defaults to the managed cloud service at `https://sirr.sirrlock.com` for zero-config operation. Set to `http://localhost:39999` for local self-hosted instances.
   </Property>
   <Property name="SIRR_TOKEN" type="string">
-    The bearer token for authenticating API requests. This is the same value as `SIRR_MASTER_KEY` on the server, or a principal key for org-scoped operations.
+    The bearer token for authenticating API requests. For Cloud users, this is your principal key from [sirrlock.com](https://sirrlock.com). For self-hosted, this is the value of `SIRR_MASTER_API_KEY` on the server.
   </Property>
   <Property name="SIRR_ORG" type="string">
     Default organization ID for multi-tenant mode. When set, CLI commands (`push`, `get`, `list`, etc.) and the MCP integration automatically target this org's scope instead of the public bucket. Equivalent to passing `--org` on every command.
@@ -159,7 +159,7 @@ docker run -d \
   --name sirrd \
   -p 39999:39999 \
   -v ./sirrd-data:/data \
-  -e SIRR_MASTER_KEY="$(openssl rand -hex 32)" \
+  -e SIRR_MASTER_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
   -e SIRR_DATA_DIR=/data \
   ghcr.io/sirrlock/sirrd
 ```
@@ -175,7 +175,7 @@ services:
     volumes:
       - sirr-data:/data
     environment:
-      SIRR_MASTER_KEY: "${SIRR_MASTER_KEY}"
+      SIRR_MASTER_ENCRYPTION_KEY: "${SIRR_MASTER_ENCRYPTION_KEY}"
       SIRR_DATA_DIR: /data
       SIRR_LOG_LEVEL: warn
 
@@ -186,6 +186,6 @@ volumes:
 ### Production recommendations
 
 - Always mount a persistent volume for `/data`. Without it, secrets are lost when the container restarts.
-- Set `SIRR_MASTER_KEY` via a Docker secret or your orchestrator's secret management, not in plain text in a compose file.
+- Set `SIRR_MASTER_ENCRYPTION_KEY` and `SIRR_MASTER_API_KEY` via Docker secrets or your orchestrator's secret management, not in plain text in a compose file.
 - Use `SIRR_HOST=0.0.0.0` (the default) inside the container and restrict access at the network level with a reverse proxy.
 - Set `SIRR_LOG_LEVEL=warn` in production to reduce log noise.
