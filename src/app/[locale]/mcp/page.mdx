@@ -163,7 +163,23 @@ The MCP server exposes sixteen tools across five groups.
 
     ### push_secret
 
-    Push a secret to the vault.
+    Push a public dead drop secret to the vault. Value-only, no key name. Returns `{id, url}` with a server-generated 256-bit hex ID.
+
+    <Properties>
+      <Property name="value" type="string" required>
+        The secret value.
+      </Property>
+      <Property name="ttl_seconds" type="number">
+        Time-to-live in seconds. Optional.
+      </Property>
+      <Property name="max_reads" type="number">
+        Maximum read count before the secret is burned. Optional.
+      </Property>
+    </Properties>
+
+    ### set_secret
+
+    Store a named secret in an org scope. Rejects duplicate keys with 409 Conflict.
 
     <Properties>
       <Property name="key" type="string" required>
@@ -171,6 +187,9 @@ The MCP server exposes sixteen tools across five groups.
       </Property>
       <Property name="value" type="string" required>
         The secret value.
+      </Property>
+      <Property name="org" type="string" required>
+        The organization ID.
       </Property>
       <Property name="ttl_seconds" type="number">
         Time-to-live in seconds. Optional.
@@ -185,11 +204,14 @@ The MCP server exposes sixteen tools across five groups.
 
     ### get_secret
 
-    Retrieve a secret value. Increments the read counter; burns the secret if `max_reads` is reached.
+    Retrieve a secret value. Dual mode: pass an ID for public secrets, or a key + org for org-scoped secrets. Increments the read counter; burns the secret if `max_reads` is reached.
 
     <Properties>
-      <Property name="key" type="string" required>
-        The secret key to retrieve. Accepts bare names, `sirr:KEYNAME`, or `KEYNAME#id` format.
+      <Property name="id_or_key" type="string" required>
+        The hex ID (public) or key name (org-scoped).
+      </Property>
+      <Property name="org" type="string">
+        Organization ID. Required for org-scoped lookups by key name.
       </Property>
     </Properties>
 
@@ -198,8 +220,11 @@ The MCP server exposes sixteen tools across five groups.
     Delete a secret immediately, regardless of TTL or read count.
 
     <Properties>
-      <Property name="key" type="string" required>
-        The secret key to delete.
+      <Property name="id_or_key" type="string" required>
+        The hex ID (public) or key name (org-scoped).
+      </Property>
+      <Property name="org" type="string">
+        Organization ID. Required for org-scoped deletes.
       </Property>
     </Properties>
 
@@ -395,18 +420,18 @@ Here is what it looks like when Claude uses Sirr through MCP.
 ### Burn after read — across sessions
 
 ```txt {{ title: 'Session 1 — store the secret' }}
-❯ set the BITBUCKET_TOKEN to 123asdzxc
+❯ store the BITBUCKET_TOKEN 123asdzxc in acme org
 
-⏺ sirr-mcp - push_secret (MCP)(key: "BITBUCKET_TOKEN", value: "123asdzxc", max_reads: 1)
-  ⎿  Stored secret 'BITBUCKET_TOKEN'. Burns after 1 read.
+⏺ sirr-mcp - set_secret (MCP)(key: "BITBUCKET_TOKEN", value: "123asdzxc", org: "acme", max_reads: 1)
+  ⎿  Stored secret 'BITBUCKET_TOKEN' in org acme. Burns after 1 read.
 
 ⏺ Stored. Burns after first read.
 ```
 
 ```txt {{ title: 'Session 2 — Claude retrieves and uses it (vault burns it)' }}
-❯ deploy to staging using sirr:BITBUCKET_TOKEN
+❯ deploy to staging using the BITBUCKET_TOKEN from acme org
 
-⏺ sirr-mcp - get_secret (MCP)(key: "BITBUCKET_TOKEN")
+⏺ sirr-mcp - get_secret (MCP)(id_or_key: "BITBUCKET_TOKEN", org: "acme")
   ⎿  123asdzxc
 
 ⏺ Got it. Deploying to staging with the token. Done.
@@ -415,7 +440,7 @@ Here is what it looks like when Claude uses Sirr through MCP.
 ```txt {{ title: 'Session 3 — secret is already gone' }}
 ❯ what is the BITBUCKET_TOKEN?
 
-⏺ sirr-mcp - get_secret (MCP)(key: "BITBUCKET_TOKEN")
+⏺ sirr-mcp - get_secret (MCP)(id_or_key: "BITBUCKET_TOKEN", org: "acme")
   ⎿  Secret 'BITBUCKET_TOKEN' not found, expired, or already burned.
 
 ⏺ The secret no longer exists on the server.
@@ -430,9 +455,10 @@ Here is what it looks like when Claude uses Sirr through MCP.
 ```txt {{ title: 'Conversation' }}
 User:  Store this API key in Sirr with a 2-hour TTL: sk-live-abc123
 
-AI:    [Calls push_secret(key: "API_KEY", value: "sk-live-abc123", ttl_seconds: 7200)]
+AI:    [Calls push_secret(value: "sk-live-abc123", ttl_seconds: 7200)]
 
-       Done. API_KEY is stored and will self-destruct in 2 hours.
+       Done. Secret stored with ID a3f8...7c2d. URL: https://sirrlock.com/s/a3f8...7c2d
+       It will self-destruct in 2 hours.
 ```
 
 ### Listing secrets before cleanup

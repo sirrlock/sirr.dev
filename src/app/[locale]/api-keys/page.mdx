@@ -203,9 +203,9 @@ Each API key is granted one or more permissions that control what operations it 
 
 | Permission | Allows |
 | --- | --- |
-| `read` | `GET /secrets/:key` — retrieve and decrypt secrets |
+| `read` | `GET /secrets/:id` — retrieve and decrypt secrets |
 | `write` | `POST /secrets` — create new secrets |
-| `delete` | `DELETE /secrets/:key` — delete specific secrets |
+| `delete` | `DELETE /secrets/:id` — delete specific secrets |
 | `admin` | All operations including `GET /secrets` (list), `/prune`, `/audit`, `/webhooks`, and `/keys` |
 
 <Note>

@@ -163,8 +163,14 @@ npm install @sirrlock/node
 import { SirrClient } from '@sirrlock/node'
 
 const sirr = new SirrClient({ token: process.env.SIRR_TOKEN! })
-await sirr.push('API_KEY', 'sk-...', { ttl: 3600, reads: 1 })
-const value = await sirr.get('API_KEY')   // null if burned or expired
+
+// Public dead drop
+const { id, url } = await sirr.push('sk-...', { ttl: 3600, reads: 1 })
+
+// Org-scoped named secret
+const sirr2 = new SirrClient({ token: process.env.SIRR_TOKEN!, org: process.env.SIRR_ORG! })
+await sirr2.set('API_KEY', 'sk-...', { ttl: 3600, reads: 1 })
+const value = await sirr2.get('API_KEY')   // null if burned or expired
 ```
 
 ### `@sirrlock/sirr` — CLI via npx
@@ -172,8 +178,9 @@ const value = await sirr.get('API_KEY')   // null if burned or expired
 Run the Sirr CLI without installing anything.
 
 ```bash {{ title: 'npx' }}
-npx @sirrlock/sirr push DB_URL="postgres://..." --reads 1 --ttl 1h
-npx @sirrlock/sirr get DB_URL
+npx @sirrlock/sirr push "postgres://..." --reads 1 --ttl 1h
+npx @sirrlock/sirr set DB_URL="postgres://..." --org $SIRR_ORG --reads 1 --ttl 1h
+npx @sirrlock/sirr get DB_URL --org $SIRR_ORG
 ```
 
 ### `@sirrlock/mcp` — MCP server

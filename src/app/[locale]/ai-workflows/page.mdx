@@ -48,18 +48,18 @@ Add the Sirr MCP server to your project's `.mcp.json`:
 ### Example conversation
 
 ```txt {{ title: 'Session 1 — store the secret' }}
-❯ set the BITBUCKET_TOKEN to 123asdzxc
+❯ store the BITBUCKET_TOKEN 123asdzxc in acme org
 
-⏺ sirr-mcp - push_secret (MCP)(key: "BITBUCKET_TOKEN", value: "123asdzxc", max_reads: 1)
-  ⎿  Stored secret 'BITBUCKET_TOKEN'. Burns after 1 read.
+⏺ sirr-mcp - set_secret (MCP)(key: "BITBUCKET_TOKEN", value: "123asdzxc", org: "acme", max_reads: 1)
+  ⎿  Stored secret 'BITBUCKET_TOKEN' in org acme. Burns after 1 read.
 
 ⏺ Stored. Burns after first read.
 ```
 
 ```txt {{ title: 'Session 2 — Claude retrieves and uses it (vault burns it)' }}
-❯ deploy to staging using sirr:BITBUCKET_TOKEN
+❯ deploy to staging using the BITBUCKET_TOKEN from acme org
 
-⏺ sirr-mcp - get_secret (MCP)(key: "BITBUCKET_TOKEN")
+⏺ sirr-mcp - get_secret (MCP)(id_or_key: "BITBUCKET_TOKEN", org: "acme")
   ⎿  123asdzxc
 
 ⏺ Got it. Deploying to staging with the token. Done.
@@ -68,7 +68,7 @@ Add the Sirr MCP server to your project's `.mcp.json`:
 ```txt {{ title: 'Session 3 — secret is already gone' }}
 ❯ what is the BITBUCKET_TOKEN?
 
-⏺ sirr-mcp - get_secret (MCP)(key: "BITBUCKET_TOKEN")
+⏺ sirr-mcp - get_secret (MCP)(id_or_key: "BITBUCKET_TOKEN", org: "acme")
   ⎿  Secret 'BITBUCKET_TOKEN' not found, expired, or already burned.
 
 ⏺ The secret no longer exists on the server.
@@ -104,10 +104,11 @@ AI agent frameworks like LangChain and CrewAI often need database credentials, A
     sirr = SirrClient(
         server="http://localhost:39999",
         token=os.environ["SIRR_TOKEN"],
+        org=os.environ["SIRR_ORG"],
     )
 
-    # Push a one-time credential for the agent
-    sirr.push(
+    # Set a one-time credential for the agent
+    sirr.set(
         "DB_URL",
         "postgres://user:pass@db:5432/app",
         reads=1,
@@ -132,6 +133,7 @@ from sirr import SirrClient
 sirr = SirrClient(
     server="http://localhost:39999",
     token=os.environ["SIRR_TOKEN"],
+    org=os.environ["SIRR_ORG"],
 )
 
 @tool
@@ -167,16 +169,18 @@ Push a deploy token before the pipeline runs. The token is read exactly once dur
         env:
           SIRR_SERVER: ${{ secrets.SIRR_SERVER }}
           SIRR_TOKEN: ${{ secrets.SIRR_TOKEN }}
+          SIRR_ORG: ${{ secrets.SIRR_ORG }}
         steps:
           - name: Push one-time deploy token
             run: |
-              sirr push DEPLOY_TOKEN="${{ secrets.DEPLOY_TOKEN }}" \
+              sirr set DEPLOY_TOKEN="${{ secrets.DEPLOY_TOKEN }}" \
+                --org $SIRR_ORG \
                 --reads 1 \
                 --ttl 5m
 
           - name: Deploy
             run: |
-              export DEPLOY_TOKEN="$(sirr get DEPLOY_TOKEN)"
+              export DEPLOY_TOKEN="$(sirr get DEPLOY_TOKEN --org $SIRR_ORG)"
               ./deploy.sh
 
           # DEPLOY_TOKEN is already burned --
@@ -201,11 +205,14 @@ Share a complete development environment with a teammate without sending credent
 
     ### Sender
 
-    ```bash {{ title: 'Push .env' }}
-    sirr push .env --ttl 24h
+    ```bash {{ title: 'Push secrets from .env' }}
+    # Push each key-value pair as an org secret
+    while IFS='=' read -r key value; do
+      sirr set "$key=$value" --org $SIRR_ORG --ttl 24h
+    done < .env
     ```
 
-    Every key-value pair in the file is stored as a separate secret with a 24-hour TTL. After 24 hours, the secrets self-destruct regardless of whether they were pulled.
+    Each key-value pair is stored as a separate org secret with a 24-hour TTL. After 24 hours, the secrets self-destruct regardless of whether they were pulled.
 
   </Col>
   <Col>
@@ -215,8 +222,9 @@ Share a complete development environment with a teammate without sending credent
     ```bash {{ title: 'Pull .env' }}
     export SIRR_SERVER="http://your-sirr-server:39999"
     export SIRR_TOKEN="shared-token"
+    export SIRR_ORG="your-org-id"
 
-    sirr pull .env
+    sirr pull .env --org $SIRR_ORG
     ```
 
     The `.env` file is written to the current directory with all secrets populated. The receiver now has a local copy and does not need the Sirr server again.
@@ -245,12 +253,12 @@ When onboarding a contractor, push the credentials they need with a TTL that mat
   <Col>
 
     ```bash {{ title: 'Two-week contractor engagement' }}
-    # Push credentials that expire in 14 days
-    sirr push STAGING_API_KEY="sk-contractor-abc" \
-      --ttl 14d
+    # Set credentials that expire in 14 days
+    sirr set STAGING_API_KEY="sk-contractor-abc" \
+      --org $SIRR_ORG --ttl 14d
 
-    sirr push STAGING_DB_URL="postgres://..." \
-      --ttl 14d
+    sirr set STAGING_DB_URL="postgres://..." \
+      --org $SIRR_ORG --ttl 14d
 
     # Contractor pulls on their machine
     # 14 days later -- credentials are gone
@@ -262,8 +270,8 @@ When onboarding a contractor, push the credentials they need with a TTL that mat
 If the engagement ends early, revoke access immediately:
 
 ```bash {{ title: 'Early revocation' }}
-sirr delete STAGING_API_KEY
-sirr delete STAGING_DB_URL
+sirr delete STAGING_API_KEY --org $SIRR_ORG
+sirr delete STAGING_DB_URL --org $SIRR_ORG
 ```
 
 ---

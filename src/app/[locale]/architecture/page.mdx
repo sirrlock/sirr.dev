@@ -88,8 +88,8 @@ Sirr uses **redb**, an embedded key-value database written in Rust. The entire d
 Each record in the database stores:
 
 <Properties>
-  <Property name="key" type="string">
-    The secret identifier (e.g., `DB_URL`). Used as the redb key.
+  <Property name="id" type="string">
+    The secret identifier — a server-generated 256-bit hex ID for public secrets, or a user-provided key name for org-scoped secrets. Used as the redb key.
   </Property>
   <Property name="nonce" type="[u8; 12]">
     Random 12-byte nonce unique to this record.

@@ -152,18 +152,18 @@ export function LandingPage() {
             <div className="space-y-1 text-slate-300">
               <p>
                 <span className="text-sirr-primary select-none">$ </span>
-                sirr set OPENAI_API_KEY sk-proj-... --ttl 1h
+                sirr set OPENAI_API_KEY=sk-proj-... --org acme --ttl 1h
               </p>
               <p className="text-emerald-400 pl-2">✓ Secret stored. Expires in 1 hour.</p>
               <p className="mt-4">
                 <span className="text-sirr-primary select-none">$ </span>
-                sirr run -- pnpm start
+                sirr run --org acme -- pnpm start
               </p>
               <p className="text-slate-500 pl-2">&gt; Injected 1 secret into environment.</p>
               <p className="text-slate-500 pl-2">&gt; Server listening on port 3000...</p>
               <p className="mt-4">
                 <span className="text-sirr-primary select-none">$ </span>
-                sirr get OPENAI_API_KEY
+                sirr get OPENAI_API_KEY --org acme
               </p>
               <p className="text-rose-400/70 pl-2">✗ Secret not found — already burned.</p>
             </div>

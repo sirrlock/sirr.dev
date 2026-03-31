@@ -86,7 +86,7 @@
       },
       "/cli": {
         "title": "CLI Reference",
-        "description": "Complete reference for all 9 Sirr CLI commands with examples."
+        "description": "Complete reference for all Sirr CLI commands — push, set, get, pull, run, list, delete, prune, audit."
       },
       "/mcp": {
         "title": "MCP Server",

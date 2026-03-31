@@ -1,18 +1,18 @@
 export const metadata = {
   title: 'CLI Reference',
   description:
-    'Complete reference for every Sirr CLI command — push, get, pull, run, list, delete, prune, share, audit, and keys.',
+    'Complete reference for every Sirr CLI command — push, set, get, pull, run, list, delete, prune, audit, and keys.',
 }
 
 export const sections = [
   { title: 'sirr push', id: 'sirr-push' },
+  { title: 'sirr set', id: 'sirr-set' },
   { title: 'sirr get', id: 'sirr-get' },
   { title: 'sirr pull', id: 'sirr-pull' },
   { title: 'sirr run', id: 'sirr-run' },
   { title: 'sirr list', id: 'sirr-list' },
   { title: 'sirr delete', id: 'sirr-delete' },
   { title: 'sirr prune', id: 'sirr-prune' },
-  { title: 'sirr share', id: 'sirr-share' },
   { title: 'sirr audit', id: 'sirr-audit' },
   { title: 'sirr keys', id: 'sirr-keys' },
   { title: 'sirr orgs', id: 'sirr-orgs' },
@@ -30,21 +30,26 @@ The `sirr` CLI is a single binary for interacting with a `sirrd` server. It talk
   To run the server, install [`sirrd`](/self-hosting) — the Sirr daemon. The `sirr` CLI is the client only.
 </Note>
 
-Configure the CLI with two environment variables:
+Configure the CLI with environment variables:
 
-- `SIRR_SERVER` -- the URL of your Sirr instance (default `sirr://localhost:39999`). Use `sirr://` for HTTP or `sirrs://` for HTTPS.
+- `SIRR_SERVER` -- the URL of your Sirr instance (default `https://sirrlock.com`). Zero-config cloud out of the box.
 - `SIRR_TOKEN` -- the bearer token matching the server's `SIRR_MASTER_KEY`
+- `SIRR_ORG` -- default organization ID for org-scoped commands
 
 ```bash {{ title: 'Environment setup' }}
-export SIRR_SERVER="sirr://localhost:39999"
+export SIRR_SERVER="https://sirrlock.com"
 export SIRR_TOKEN="your-master-key"
 ```
+
+<Note>
+  Use `-v` to print the CLI version.
+</Note>
 
 ---
 
 ## sirr push
 
-Push a secret to the server. Accepts a single `KEY=VALUE` pair or an entire `.env` file for batch upload.
+Push an anonymous (public) secret to the server. Accepts a raw value — no key name. The server generates a 256-bit hex ID and returns a shareable URL.
 
 <Row>
   <Col>
@@ -52,8 +57,7 @@ Push a secret to the server. Accepts a single `KEY=VALUE` pair or an entire `.en
     ### Usage
 
     ```bash
-    sirr push KEY=VALUE [options]
-    sirr push .env [options]
+    sirr push <VALUE> [options]
     ```
 
     <Properties>
@@ -63,37 +67,31 @@ Push a secret to the server. Accepts a single `KEY=VALUE` pair or an entire `.en
       <Property name="--reads" type="number">
         Maximum number of reads before the secret is burned. Once the limit is reached, the secret is permanently destroyed.
       </Property>
-      <Property name="--org" type="string">
-        Organization ID for multi-tenant mode. Pushes the secret into the org's scope. Can also be set via `SIRR_ORG`.
-      </Property>
     </Properties>
 
   </Col>
   <Col>
 
-    ```bash {{ title: 'Single secret' }}
-    sirr push DB_URL="postgres://user:pass@db:5432/app" \
+    ```bash {{ title: 'Dead drop a secret' }}
+    sirr push "postgres://user:pass@db:5432/app" \
       --ttl 1h \
       --reads 1
-    ```
-
-    ```bash {{ title: 'Batch push from .env file' }}
-    # Pushes every key-value pair in the file
-    sirr push .env --ttl 24h
+    # → id:  a3f8...7c2d
+    # → url: https://sirrlock.com/s/a3f8...7c2d
     ```
 
   </Col>
 </Row>
 
 <Note>
-  When pushing a `.env` file, each line is stored as a separate secret on the server. All secrets inherit the same `--ttl` and `--reads` options.
+  `sirr push` is for public dead drops — value-only, no key name. The returned URL can be shared with anyone. Use `sirr set` for org-scoped named secrets.
 </Note>
 
 ---
 
-## sirr get
+## sirr set
 
-Retrieve and print a secret value. Each call increments the read counter. If the read limit is reached, the secret is burned immediately after being returned.
+Store a named secret in an organization scope. Requires `--org` (or `$SIRR_ORG`). Rejects duplicate keys with an error — delete the existing secret first.
 
 <Row>
   <Col>
@@ -101,20 +99,80 @@ Retrieve and print a secret value. Each call increments the read counter. If the
     ### Usage
 
     ```bash
-    sirr get KEY [--org ORG]
+    sirr set KEY=VALUE --org <ORG> [options]
+    sirr set KEY -f <FILE> --org <ORG> [options]
     ```
 
-    The value is printed to stdout with no trailing newline, making it safe to use in shell pipelines and variable assignments. Pass `--org` to retrieve from an org scope.
+    <Properties>
+      <Property name="--org" type="string" required>
+        Organization ID. Can also be set via `SIRR_ORG`.
+      </Property>
+      <Property name="--ttl" type="duration">
+        Time-to-live before the secret self-destructs.
+      </Property>
+      <Property name="--reads" type="number">
+        Maximum number of reads before the secret is burned.
+      </Property>
+      <Property name="-f" type="path">
+        Read the value from a file instead of inline.
+      </Property>
+    </Properties>
 
   </Col>
   <Col>
 
-    ```bash {{ title: 'Example' }}
-    sirr get DB_URL
+    ```bash {{ title: 'Named secret' }}
+    sirr set DB_URL="postgres://user:pass@db:5432/app" \
+      --org org_a1b2c3d4 \
+      --ttl 1h
+    # → key: DB_URL
+    # → id:  a3f8...7c2d
+    ```
+
+    ```bash {{ title: 'From file' }}
+    sirr set TLS_CERT -f ./cert.pem --org org_a1b2c3d4
+    ```
+
+    ```bash {{ title: 'Duplicate key rejected' }}
+    sirr set DB_URL="new-value" --org org_a1b2c3d4
+    # → Error: Key 'DB_URL' already exists. Delete it first.
+    ```
+
+  </Col>
+</Row>
+
+---
+
+## sirr get
+
+Retrieve and print a secret value. For public secrets, pass the hex ID. For org secrets, pass the key name with `--org`.
+
+<Row>
+  <Col>
+
+    ### Usage
+
+    ```bash
+    sirr get <ID>                    # public secret by hex ID
+    sirr get <KEY> --org <ORG>       # org secret by key name
+    ```
+
+    The value is printed to stdout with no trailing newline, making it safe to use in shell pipelines and variable assignments.
+
+  </Col>
+  <Col>
+
+    ```bash {{ title: 'Public secret by ID' }}
+    sirr get a3f8...7c2d
+    # postgres://user:pass@db:5432/app
+    ```
+
+    ```bash {{ title: 'Org secret by key' }}
+    sirr get DB_URL --org org_a1b2c3d4
     # postgres://user:pass@db:5432/app
 
     # Capture into a variable
-    export DB_URL="$(sirr get DB_URL)"
+    export DB_URL="$(sirr get DB_URL --org $SIRR_ORG)"
     ```
 
   </Col>
@@ -124,7 +182,7 @@ Retrieve and print a secret value. Each call increments the read counter. If the
 
 ## sirr pull
 
-Pull all secrets from the server and write them to a `.env` file. If the file already exists, it is overwritten.
+Pull all secrets from an org and write them to a `.env` file. If the file already exists, it is overwritten. Requires `--org`.
 
 <Row>
   <Col>
@@ -132,20 +190,16 @@ Pull all secrets from the server and write them to a `.env` file. If the file al
     ### Usage
 
     ```bash
-    sirr pull .env [--org ORG]
+    sirr pull .env --org <ORG>
     ```
 
-    This is the inverse of `sirr push .env`. Use it to sync secrets to a new machine or restore a development environment. Pass `--org` to pull from an org scope.
+    This is the inverse of batch `sirr set`. Use it to sync secrets to a new machine or restore a development environment.
 
   </Col>
   <Col>
 
     ```bash {{ title: 'Example' }}
-    # On machine A
-    sirr push .env --ttl 24h
-
-    # On machine B
-    sirr pull .env
+    sirr pull .env --org $SIRR_ORG
     cat .env
     # DB_URL=postgres://user:pass@db:5432/app
     # API_KEY=sk-live-abc123
@@ -162,7 +216,7 @@ Pull all secrets from the server and write them to a `.env` file. If the file al
 
 ## sirr run
 
-Inject all secrets from the server as environment variables and execute a command. The secrets are never written to disk -- they exist only in the child process's environment.
+Inject all secrets from an org as environment variables and execute a command. The secrets are never written to disk -- they exist only in the child process's environment. Requires `--org`.
 
 <Row>
   <Col>
@@ -170,23 +224,23 @@ Inject all secrets from the server as environment variables and execute a comman
     ### Usage
 
     ```bash
-    sirr run [--org ORG] -- <command> [args...]
+    sirr run --org <ORG> -- <command> [args...]
     ```
 
-    The double dash `--` separates Sirr's arguments from the command to run. Everything after `--` is passed to the child process. Pass `--org` to inject secrets from an org scope.
+    The double dash `--` separates Sirr's arguments from the command to run. Everything after `--` is passed to the child process.
 
   </Col>
   <Col>
 
     ```bash {{ title: 'Example' }}
     # Run a Node.js app with all secrets injected
-    sirr run -- node app.js
+    sirr run --org $SIRR_ORG -- node app.js
 
     # Run a Python script
-    sirr run -- python manage.py runserver
+    sirr run --org $SIRR_ORG -- python manage.py runserver
 
     # Run any command
-    sirr run -- docker compose up
+    sirr run --org $SIRR_ORG -- docker compose up
     ```
 
   </Col>
@@ -196,7 +250,7 @@ Inject all secrets from the server as environment variables and execute a comman
 
 ## sirr list
 
-List all secrets stored on the server. Shows metadata only -- keys, TTL, read counts, and creation timestamps. Secret values are never displayed.
+List all secrets stored on the server. Shows metadata only -- keys, TTL, read counts, and creation timestamps. Secret values are never displayed. Requires `--org`.
 
 <Row>
   <Col>
@@ -204,16 +258,14 @@ List all secrets stored on the server. Shows metadata only -- keys, TTL, read co
     ### Usage
 
     ```bash
-    sirr list [--org ORG]
+    sirr list --org <ORG>
     ```
-
-    Pass `--org` to list secrets within an org scope.
 
   </Col>
   <Col>
 
     ```bash {{ title: 'Example output' }}
-    sirr list
+    sirr list --org $SIRR_ORG
     # KEY         TTL        READS  CREATED
     # DB_URL      58m left   0/1    2 min ago
     # API_KEY     23h left   2/∞    1 hour ago
@@ -235,16 +287,17 @@ Delete a specific secret immediately, regardless of its TTL or remaining reads.
     ### Usage
 
     ```bash
-    sirr delete KEY [--org ORG]
+    sirr delete <ID>                   # public secret by hex ID
+    sirr delete <KEY> --org <ORG>      # org secret by key name
     ```
 
-    The secret is permanently destroyed from the server. This action cannot be undone. Pass `--org` to delete from an org scope.
+    The secret is permanently destroyed from the server. This action cannot be undone.
 
   </Col>
   <Col>
 
     ```bash {{ title: 'Example' }}
-    sirr delete DB_URL
+    sirr delete DB_URL --org $SIRR_ORG
     # Deleted DB_URL
     ```
 
@@ -272,34 +325,8 @@ Delete all expired secrets from the server. Expired secrets are already unreadab
   <Col>
 
     ```bash {{ title: 'Example' }}
-    sirr prune
+    sirr prune --org $SIRR_ORG
     # Pruned 12 expired secrets
-    ```
-
-  </Col>
-</Row>
-
----
-
-## sirr share
-
-Generate a shareable reference for a secret. The reference can be given to another person or system to retrieve the secret without exposing your master key.
-
-<Row>
-  <Col>
-
-    ### Usage
-
-    ```bash
-    sirr share KEY [--org ORG]
-    ```
-
-  </Col>
-  <Col>
-
-    ```bash {{ title: 'Example' }}
-    sirr share DB_URL
-    # https://your-sirr-server/s/a1b2c3d4e5f6
     ```
 
   </Col>
@@ -324,13 +351,16 @@ Query the audit log to see who accessed what and when.
       <Property name="--action" type="string">
         Filter by event type (e.g. `secret.read`, `secret.created`).
       </Property>
+      <Property name="--key" type="string">
+        Filter by specific secret key or ID to trace a secret's lifecycle.
+      </Property>
       <Property name="--since" type="duration">
         Only show events after this duration ago (e.g. `1h`, `7d`).
       </Property>
       <Property name="--limit" type="number">
         Maximum number of entries to show. Defaults to 50.
       </Property>
-      <Property name="--org" type="string">
+      <Property name="--org" type="string" required>
         Organization ID to query org-scoped audit logs.
       </Property>
     </Properties>
@@ -340,10 +370,13 @@ Query the audit log to see who accessed what and when.
 
     ```bash {{ title: 'Example' }}
     # Last 20 read events
-    sirr audit --action secret.read --limit 20
+    sirr audit --action secret.read --limit 20 --org $SIRR_ORG
+
+    # Trace a specific secret's lifecycle
+    sirr audit --key DB_URL --org $SIRR_ORG
 
     # All events in the last 24 hours
-    sirr audit --since 24h
+    sirr audit --since 24h --org $SIRR_ORG
 
     # Example output
     # TIMESTAMP            ACTION          KEY
@@ -551,7 +584,7 @@ Manage roles within an organization. Requires master key authentication.
 
 ## sirr me
 
-View and manage your own principal identity and keys. Authenticates with a principal key.
+View your connection info and principal identity. Works anonymously (shows connection info even without auth).
 
 <Row>
   <Col>
@@ -559,7 +592,7 @@ View and manage your own principal identity and keys. Authenticates with a princ
     ### Usage
 
     ```bash
-    sirr me info
+    sirr me
     sirr me keys
     sirr me create-key --name NAME [--valid-after TS] [--valid-before TS]
     sirr me delete-key KEY_ID
@@ -581,8 +614,9 @@ View and manage your own principal identity and keys. Authenticates with a princ
   <Col>
 
     ```bash {{ title: 'Example' }}
-    # Show current identity
-    sirr me info
+    # Show current identity (works even without auth)
+    sirr me
+    # Server:    https://sirrlock.com
     # Principal: prin_e5f6a7b8 (ci-bot)
     # Org:       org_a1b2c3d4
     # Role:      writer
@@ -622,9 +656,9 @@ Sirr accepts human-readable duration strings for the `--ttl` flag. Combine a num
 | `30d`  | days    | 30 days (max)   |
 
 ```bash {{ title: 'TTL examples' }}
-sirr push TOKEN=abc123 --ttl 30s        # Burns in 30 seconds
-sirr push DB_URL=postgres://... --ttl 2h # Burns in 2 hours
-sirr push .env --ttl 7d                  # All secrets burn in 7 days
+sirr push "abc123" --ttl 30s                              # Burns in 30 seconds
+sirr push "postgres://..." --ttl 2h                       # Burns in 2 hours
+sirr set DB_URL="postgres://..." --org $SIRR_ORG --ttl 7d # Burns in 7 days
 ```
 
 <Note>

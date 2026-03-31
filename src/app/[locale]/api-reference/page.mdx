@@ -5,11 +5,11 @@ export const metadata = {
 }
 
 export const sections = [
-  { title: 'Create a secret', id: 'post-secrets' },
+  { title: 'Create a public secret', id: 'post-secrets' },
   { title: 'List secrets', id: 'get-secrets' },
-  { title: 'Retrieve a secret', id: 'get-secrets-key' },
-  { title: 'Update a secret', id: 'patch-secrets-key' },
-  { title: 'Delete a secret', id: 'delete-secrets-key' },
+  { title: 'Retrieve a public secret', id: 'get-secrets-id' },
+  { title: 'Update a public secret', id: 'patch-secrets-id' },
+  { title: 'Delete a public secret', id: 'delete-secrets-id' },
   { title: 'Prune expired secrets', id: 'post-prune' },
   { title: 'Audit logs', id: 'audit-logs' },
   { title: 'Webhooks', id: 'webhooks' },
@@ -50,19 +50,16 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
 
 ---
 
-## Create a secret {{ tag: 'POST', label: '/secrets', id: 'post-secrets' }}
+## Create a public secret {{ tag: 'POST', label: '/secrets', id: 'post-secrets' }}
 
 <Row>
   <Col>
 
-    Create an encrypted secret. The value is encrypted at rest using ChaCha20Poly1305 with a per-record nonce derived from your master key via Argon2id.
+    Create an anonymous (public) encrypted secret. The server generates a 256-bit hex ID and returns it along with a shareable URL. No `key` field — this is a dead drop.
 
     ### Required attributes
 
     <Properties>
-      <Property name="key" type="string">
-        Unique identifier for the secret. Used to retrieve or delete it later.
-      </Property>
       <Property name="value" type="string">
         The secret value to encrypt and store.
       </Property>
@@ -93,7 +90,6 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
       -H "Authorization: Bearer $SIRR_MASTER_KEY" \
       -H "Content-Type: application/json" \
       -d '{
-        "key": "DB_URL",
         "value": "postgres://user:pass@db:5432/myapp",
         "ttl_seconds": 3600,
         "max_reads": 1
@@ -108,7 +104,6 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        key: 'DB_URL',
         value: 'postgres://user:pass@db:5432/myapp',
         ttl_seconds: 3600,
         max_reads: 1,
@@ -125,7 +120,6 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
         "http://localhost:39999/secrets",
         headers={"Authorization": f"Bearer {SIRR_MASTER_KEY}"},
         json={
-            "key": "DB_URL",
             "value": "postgres://user:pass@db:5432/myapp",
             "ttl_seconds": 3600,
             "max_reads": 1,
@@ -139,7 +133,8 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
 
     ```json {{ title: 'Response (201)' }}
     {
-      "key": "DB_URL"
+      "id": "a3f87b2c9d4e5f6a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4",
+      "url": "https://sirrlock.com/s/a3f87b2c..."
     }
     ```
 
@@ -160,10 +155,10 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
 <Row>
   <Col>
 
-    List metadata for all active secrets. This endpoint never returns secret values — only keys, timestamps, and read counters. This is a deliberate security design choice.
+    List metadata for all active public secrets. This endpoint never returns secret values — only IDs, timestamps, and read counters. This is a deliberate security design choice.
 
     <Note>
-      Secret values are never included in list responses. Use `GET /secrets/:key` to retrieve and decrypt a specific secret.
+      Secret values are never included in list responses. Use `GET /secrets/:id` to retrieve and decrypt a specific secret.
     </Note>
 
   </Col>
@@ -203,7 +198,7 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
     {
       "secrets": [
         {
-          "key": "DB_URL",
+          "id": "a3f87b2c9d4e5f6a1b2c3d4e5f6a7b8c",
           "created_at": 1700000000,
           "expires_at": 1700003600,
           "max_reads": 1,
@@ -218,33 +213,33 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
 
 ---
 
-## Retrieve a secret {{ tag: 'GET', label: '/secrets/:key', id: 'get-secrets-key' }}
+## Retrieve a public secret {{ tag: 'GET', label: '/secrets/:id', id: 'get-secrets-id' }}
 
 <Row>
   <Col>
 
-    Retrieve and decrypt a secret by its key. Each call increments the read counter. If the secret has reached its `max_reads` limit, it is permanently destroyed after this response. Returns `404` if the secret has expired, been burned, or does not exist.
+    Retrieve and decrypt a public secret by its server-generated hex ID. Each call increments the read counter. If the secret has reached its `max_reads` limit, it is permanently destroyed after this response. Returns `404` if the secret has expired, been burned, or does not exist.
 
     ### Path parameters
 
     <Properties>
-      <Property name="key" type="string">
-        The key of the secret to retrieve.
+      <Property name="id" type="string">
+        The 256-bit hex ID of the secret (returned by `POST /secrets`).
       </Property>
     </Properties>
 
   </Col>
   <Col sticky>
 
-    <CodeGroup title="Request" tag="GET" label="/secrets/:key">
+    <CodeGroup title="Request" tag="GET" label="/secrets/:id">
 
     ```bash {{ title: 'cURL' }}
-    curl http://localhost:39999/secrets/DB_URL \
+    curl http://localhost:39999/secrets/a3f87b2c9d4e5f6a1b2c3d4e5f6a7b8c \
       -H "Authorization: Bearer $SIRR_MASTER_KEY"
     ```
 
     ```js {{ title: 'Node.js' }}
-    const response = await fetch('http://localhost:39999/secrets/DB_URL', {
+    const response = await fetch('http://localhost:39999/secrets/a3f87b2c9d4e5f6a1b2c3d4e5f6a7b8c', {
       headers: {
         'Authorization': `Bearer ${process.env.SIRR_MASTER_KEY}`,
       },
@@ -257,7 +252,7 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
     import requests
 
     response = requests.get(
-        "http://localhost:39999/secrets/DB_URL",
+        "http://localhost:39999/secrets/a3f87b2c9d4e5f6a1b2c3d4e5f6a7b8c",
         headers={"Authorization": f"Bearer {SIRR_MASTER_KEY}"},
     )
 
@@ -268,7 +263,6 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
 
     ```json {{ title: 'Response' }}
     {
-      "key": "DB_URL",
       "value": "postgres://user:pass@db:5432/myapp"
     }
     ```
@@ -290,33 +284,33 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
 
 ---
 
-## Delete a secret {{ tag: 'DELETE', label: '/secrets/:key', id: 'delete-secrets-key' }}
+## Delete a public secret {{ tag: 'DELETE', label: '/secrets/:id', id: 'delete-secrets-id' }}
 
 <Row>
   <Col>
 
-    Permanently delete a secret immediately, regardless of its TTL or remaining reads.
+    Permanently delete a public secret immediately, regardless of its TTL or remaining reads.
 
     ### Path parameters
 
     <Properties>
-      <Property name="key" type="string">
-        The key of the secret to delete.
+      <Property name="id" type="string">
+        The hex ID of the secret to delete.
       </Property>
     </Properties>
 
   </Col>
   <Col sticky>
 
-    <CodeGroup title="Request" tag="DELETE" label="/secrets/:key">
+    <CodeGroup title="Request" tag="DELETE" label="/secrets/:id">
 
     ```bash {{ title: 'cURL' }}
-    curl -X DELETE http://localhost:39999/secrets/DB_URL \
+    curl -X DELETE http://localhost:39999/secrets/a3f87b2c9d4e5f6a1b2c3d4e5f6a7b8c \
       -H "Authorization: Bearer $SIRR_MASTER_KEY"
     ```
 
     ```js {{ title: 'Node.js' }}
-    const response = await fetch('http://localhost:39999/secrets/DB_URL', {
+    const response = await fetch('http://localhost:39999/secrets/a3f87b2c9d4e5f6a1b2c3d4e5f6a7b8c', {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${process.env.SIRR_MASTER_KEY}`,
@@ -330,7 +324,7 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
     import requests
 
     response = requests.delete(
-        "http://localhost:39999/secrets/DB_URL",
+        "http://localhost:39999/secrets/a3f87b2c9d4e5f6a1b2c3d4e5f6a7b8c",
         headers={"Authorization": f"Bearer {SIRR_MASTER_KEY}"},
     )
 
@@ -402,18 +396,18 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
 
 ---
 
-## Update a secret {{ tag: 'PATCH', label: '/secrets/:key', id: 'patch-secrets-key' }}
+## Update a public secret {{ tag: 'PATCH', label: '/secrets/:id', id: 'patch-secrets-id' }}
 
 <Row>
   <Col>
 
-    Update the TTL or read limit of an existing secret without changing its value.
+    Update the TTL or read limit of an existing public secret without changing its value.
 
     ### Path parameters
 
     <Properties>
-      <Property name="key" type="string">
-        The key of the secret to update.
+      <Property name="id" type="string">
+        The hex ID of the secret to update.
       </Property>
     </Properties>
 
@@ -431,10 +425,10 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
   </Col>
   <Col sticky>
 
-    <CodeGroup title="Request" tag="PATCH" label="/secrets/:key">
+    <CodeGroup title="Request" tag="PATCH" label="/secrets/:id">
 
     ```bash {{ title: 'cURL' }}
-    curl -X PATCH http://localhost:39999/secrets/DB_URL \
+    curl -X PATCH http://localhost:39999/secrets/a3f87b2c9d4e5f6a1b2c3d4e5f6a7b8c \
       -H "Authorization: Bearer $SIRR_MASTER_KEY" \
       -H "Content-Type: application/json" \
       -d '{ "ttl_seconds": 7200 }'
@@ -444,7 +438,7 @@ Sirr exposes HTTP endpoints for secrets management, audit logging, webhooks, and
 
     ```json {{ title: 'Response' }}
     {
-      "key": "DB_URL",
+      "id": "a3f87b2c9d4e5f6a1b2c3d4e5f6a7b8c",
       "updated": true
     }
     ```
@@ -1199,6 +1193,13 @@ Sirr supports multi-tenant isolation through organizations, principals, and role
     ```json {{ title: 'Response (201)' }}
     {
       "key": "DB_URL"
+    }
+    ```
+
+    ```json {{ title: 'Error (409) — duplicate key' }}
+    {
+      "error": "secret_exists",
+      "message": "Key 'DB_URL' already exists. Delete it first."
     }
     ```
 

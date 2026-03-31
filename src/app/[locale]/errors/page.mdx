@@ -43,6 +43,9 @@ Sirr uses conventional HTTP status codes to indicate the outcome of a request. S
   <Property name="404 Not Found">
     The requested secret does not exist — it may have expired, been burned after reaching its read limit, or was never created.
   </Property>
+  <Property name="409 Conflict">
+    An org-scoped secret with the given key already exists. Delete it first before creating a new one.
+  </Property>
   <Property name="500 Internal Server Error">
     An unexpected server-side failure occurred, such as a database or encryption error.
   </Property>
@@ -88,15 +91,15 @@ Below are the errors you are most likely to encounter during development, along 
 <Row>
   <Col>
 
-    Returned when the request body is missing a required field or contains an invalid value. The `POST /secrets` endpoint requires both `key` and `value` in the JSON body.
+    Returned when the request body is missing a required field or contains an invalid value. The `POST /secrets` endpoint requires `value` in the JSON body. The `POST /orgs/:org_id/secrets` endpoint requires both `key` and `value`.
 
     **Typical causes:**
 
-    - Missing `key` or `value` in the request body
+    - Missing `value` in the request body
+    - Missing `key` for org-scoped secrets
     - Sending a non-JSON content type
-    - Empty string for `key`
 
-    **Fix:** Ensure your request body is valid JSON with both `key` and `value` fields populated.
+    **Fix:** Ensure your request body is valid JSON with the required fields populated.
 
   </Col>
   <Col>
@@ -105,7 +108,7 @@ Below are the errors you are most likely to encounter during development, along 
     curl -X POST http://localhost:39999/secrets \
       -H "Authorization: Bearer $SIRR_TOKEN" \
       -H "Content-Type: application/json" \
-      -d '{"key": "db/password"}'
+      -d '{}'
     ```
 
     ```json {{ title: 'Response — 400' }}

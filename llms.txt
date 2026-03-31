@@ -7,17 +7,16 @@ Next.js + MDX, 10 languages, deployed at https://sirr.dev
 
 - / — Home
 - /quickstart — Get started in 5 minutes
-- /quickstart/single-user — Single-user self-hosted setup
+- /quickstart/solo-dev — Single-user self-hosted setup
+- /quickstart/devops — DevOps team setup with patchable secrets
 - /quickstart/multi-team — Multi-tenant org setup
-- /quickstart/ai-assistant — MCP server setup for Claude
-- /api — HTTP API reference
-- /cli — CLI reference
+- /api-reference — HTTP API reference
+- /cli — CLI reference (push, set, get, pull, run, list, delete, prune, audit)
 - /sdks — SDK overview (Node.js, Python, .NET)
-- /mcp — MCP server reference
+- /mcp — MCP server reference (push_secret, set_secret, get_secret)
 - /self-hosting — Deployment and configuration
 - /security — Security model and encryption
 - /licensing — License tiers and keys
-- /changelog — Release history
 
 ## Languages
 

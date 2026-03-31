@@ -72,11 +72,14 @@ Users may encrypt their secrets client-side before submitting them to the API. I
 - Users who opt out of client-side encryption are still protected by Tier 1.
 
 ```bash {{ title: 'Client-side encryption with the CLI' }}
-# Encrypt locally before pushing
-sirr push db/prod --value "$(echo 'pg://user:pass@host/db' | age -r age1...)" --ttl 1h
+# Encrypt locally before pushing as a public dead drop
+sirr push "$(echo 'pg://user:pass@host/db' | age -r age1...)" --ttl 1h
 
-# Decrypt after pulling
-sirr pull db/prod | age -d -i key.txt
+# Or set as an org secret
+sirr set db/prod="$(echo 'pg://user:pass@host/db' | age -r age1...)" --org $SIRR_ORG --ttl 1h
+
+# Decrypt after retrieving
+sirr get db/prod --org $SIRR_ORG | age -d -i key.txt
 ```
 
 <Note>

@@ -106,8 +106,8 @@ These variables control the Sirr server process.
 The Sirr CLI and official SDKs read these variables to connect to a Sirr server.
 
 <Properties>
-  <Property name="SIRR_SERVER" type="string" default="sirr://localhost:39999">
-    The base URL of the Sirr server to connect to. The sirr CLI accepts `sirr://` (maps to `http://`) and `sirrs://` (maps to `https://`), or plain `http://`/`https://` for SDKs and other tools.
+  <Property name="SIRR_SERVER" type="string" default="https://sirrlock.com">
+    The base URL of the Sirr server to connect to. Defaults to the managed cloud service at `https://sirrlock.com` for zero-config operation. Set to `http://localhost:39999` for local self-hosted instances.
   </Property>
   <Property name="SIRR_TOKEN" type="string">
     The bearer token for authenticating API requests. This is the same value as `SIRR_MASTER_KEY` on the server, or a principal key for org-scoped operations.
@@ -122,10 +122,11 @@ You can set these in your shell profile or pass them inline:
 ```bash {{ title: 'Client configuration' }}
 export SIRR_SERVER="https://sirr.internal.example.com"
 export SIRR_TOKEN="your-master-key"
+export SIRR_ORG="your-org-id"
 
 # Now all CLI commands authenticate automatically
-sirr push API_KEY="sk-..." --ttl 1h
-sirr get API_KEY
+sirr set API_KEY="sk-..." --org $SIRR_ORG --ttl 1h
+sirr get API_KEY --org $SIRR_ORG
 ```
 
 ## Data directories

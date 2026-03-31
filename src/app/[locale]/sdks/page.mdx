@@ -18,7 +18,7 @@ export const sections = [
 
 # SDKs
 
-The fastest way to integrate with Sirr is through one of the official client libraries. Each SDK wraps the HTTP API so you can push and retrieve secrets with a single function call. {{ className: 'lead' }}
+The fastest way to integrate with Sirr is through one of the official client libraries. Each SDK wraps the HTTP API so you can push anonymous secrets or set named org-scoped secrets with a single function call. {{ className: 'lead' }}
 
 ## Official libraries
 
@@ -54,14 +54,15 @@ The fastest way to integrate with Sirr is through one of the official client lib
       token: process.env.SIRR_TOKEN,
     })
 
-    // Push a secret with a 1-hour TTL and 3 read limit
-    await sirr.push('db/password', 's3cret!', {
+    // Push a public dead drop (value only, no key)
+    const { id, url } = await sirr.push('s3cret!', {
       ttl: 3600,
       reads: 3,
     })
+    console.log(url) // shareable URL
 
-    // Retrieve the secret
-    const secret = await sirr.get('db/password')
+    // Retrieve by ID
+    const secret = await sirr.get(id)
     console.log(secret.value) // "s3cret!"
     ```
 
@@ -99,11 +100,12 @@ The fastest way to integrate with Sirr is through one of the official client lib
         token=os.environ["SIRR_TOKEN"],
     )
 
-    # Push a secret with a 1-hour TTL and 3 read limit
-    client.push("db/password", "s3cret!", ttl=3600, reads=3)
+    # Push a public dead drop (value only, no key)
+    result = client.push("s3cret!", ttl=3600, reads=3)
+    print(result.url)  # shareable URL
 
-    # Retrieve the secret — returns the value string, or None if burned/expired
-    value = client.get("db/password")
+    # Retrieve by ID — returns the value string, or None if burned/expired
+    value = client.get(result.id)
     print(value)  # "s3cret!"
     ```
 
@@ -114,8 +116,8 @@ The fastest way to integrate with Sirr is through one of the official client lib
         server=os.environ["SIRR_SERVER"],
         token=os.environ["SIRR_TOKEN"],
     ) as client:
-        await client.push("db/password", "s3cret!", ttl=3600, reads=3)
-        value = await client.get("db/password")
+        result = await client.push("s3cret!", ttl=3600, reads=3)
+        value = await client.get(result.id)
     ```
 
   </Col>
@@ -152,15 +154,16 @@ The fastest way to integrate with Sirr is through one of the official client lib
         Token = Environment.GetEnvironmentVariable("SIRR_TOKEN"),
     });
 
-    // Push a secret
-    await client.PushAsync("db/password", "s3cret!", new PushOptions
+    // Push a public dead drop (value only, no key)
+    var result = await client.PushAsync("s3cret!", new PushOptions
     {
         Ttl = 3600,
         Reads = 3,
     });
+    Console.WriteLine(result.Url); // shareable URL
 
-    // Retrieve the secret
-    var secret = await client.GetAsync("db/password");
+    // Retrieve by ID
+    var secret = await client.GetAsync(result.Id);
     Console.WriteLine(secret.Value); // "s3cret!"
     ```
 
@@ -174,7 +177,7 @@ The fastest way to integrate with Sirr is through one of the official client lib
 <Row>
   <Col>
 
-    The `sirr` binary is both the server and a built-in CLI. You can use it to push and retrieve secrets directly from the command line without any additional tooling.
+    The `sirr` binary is the CLI client. You can use it to push and retrieve secrets directly from the command line without any additional tooling.
 
     ```bash {{ title: 'Install via Cargo' }}
     cargo install sirr
@@ -192,21 +195,24 @@ The fastest way to integrate with Sirr is through one of the official client lib
   <Col>
 
     ```bash {{ title: 'CLI usage' }}
-    # Set your server and token
-    export SIRR_SERVER=http://localhost:39999
+    # Default server: https://sirrlock.com (zero-config)
     export SIRR_TOKEN=your-master-key
 
-    # Push a secret with a 1-hour TTL
-    sirr push db/password "s3cret!" --ttl 3600 --reads 3
+    # Push a public dead drop
+    sirr push "s3cret!" --ttl 1h --reads 3
 
-    # Get a secret
-    sirr get db/password
+    # Set a named org secret
+    sirr set DB_URL="s3cret!" --org $SIRR_ORG --ttl 1h
 
-    # List all secrets (metadata only)
-    sirr list
+    # Get by ID (public) or key (org)
+    sirr get a3f8...7c2d
+    sirr get DB_URL --org $SIRR_ORG
+
+    # List org secrets (metadata only)
+    sirr list --org $SIRR_ORG
 
     # Delete a secret
-    sirr delete db/password
+    sirr delete DB_URL --org $SIRR_ORG
     ```
 
   </Col>
@@ -216,7 +222,7 @@ The fastest way to integrate with Sirr is through one of the official client lib
 
 ## Multi-tenant (org-scoped) {{ anchor: false, id: 'multi-tenant' }}
 
-All three SDKs support multi-tenant mode. Pass an `org` parameter to scope secrets, principals, and keys to a specific organization. The examples above use **public bucket mode** (no org). The examples below show **org-scoped mode**.
+All three SDKs support multi-tenant mode. Pass an `org` parameter to scope secrets, principals, and keys to a specific organization. The examples above use **public dead drop mode** (no org, value-only). The examples below show **org-scoped mode** with named keys using `set` and `get`.
 
 <Note>
   Org-scoped mode requires a principal key (not the master key). Start the server with `sirrd serve --init` to bootstrap a default org and admin principal with temporary keys.
@@ -258,35 +264,35 @@ var client = new SirrClient(new SirrOptions
 
 </CodeGroup>
 
-<CodeGroup title="Org-scoped push and get">
+<CodeGroup title="Org-scoped set and get">
 
 ```js {{ title: 'Node.js' }}
-// Push to org bucket
-await sirr.push('db/password', 's3cret!', { ttl: 3600, reads: 3 })
+// Set a named secret in org (rejects duplicates with SecretExistsError)
+const { key, id } = await sirr.set('db/password', 's3cret!', { ttl: 3600, reads: 3 })
 
-// Retrieve from org bucket
+// Retrieve from org bucket by key
 const secret = await sirr.get('db/password')
 console.log(secret.value) // "s3cret!"
 ```
 
 ```python {{ title: 'Python' }}
-# Push to org bucket
-client.push("db/password", "s3cret!", ttl=3600, reads=3)
+# Set a named secret in org (raises SecretExistsError on duplicate)
+result = client.set("db/password", "s3cret!", ttl=3600, reads=3)
 
-# Retrieve from org bucket — returns the value string, or None
+# Retrieve from org bucket by key — returns the value string, or None
 value = client.get("db/password")
 print(value)  # "s3cret!"
 ```
 
 ```csharp {{ title: '.NET' }}
-// Push to org bucket
-await client.PushAsync("db/password", "s3cret!", new PushOptions
+// Set a named secret in org (throws SecretExistsException on duplicate)
+await client.SetAsync("db/password", "s3cret!", new SetOptions
 {
     Ttl = 3600,
     Reads = 3,
 });
 
-// Retrieve from org bucket
+// Retrieve from org bucket by key
 var secret = await client.GetAsync("db/password");
 Console.WriteLine(secret.Value); // "s3cret!"
 ```

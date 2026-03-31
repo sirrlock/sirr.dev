@@ -63,14 +63,16 @@ sirrd serve
 
 ## Push your first secret
 
-Push a secret with a 1-hour TTL and a single-read limit. Once read, it is gone.
+Push a public dead drop with a 1-hour TTL and a single-read limit. Once read, it is gone.
 
 <CodeGroup>
 
 ```bash {{ title: 'CLI' }}
-sirr push DB_URL="postgres://user:pass@db:5432/myapp" \
+sirr push "postgres://user:pass@db:5432/myapp" \
   --reads 1 \
   --ttl 1h
+# → id:  a3f8...7c2d
+# → url: https://sirrlock.com/s/a3f8...7c2d
 ```
 
 ```bash {{ title: 'cURL' }}
@@ -78,11 +80,11 @@ curl -X POST http://localhost:39999/secrets \
   -H "Authorization: Bearer $SIRR_MASTER_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "key": "DB_URL",
     "value": "postgres://user:pass@db:5432/myapp",
     "max_reads": 1,
     "ttl_seconds": 3600
   }'
+# → {"id": "a3f8...7c2d", "url": "https://sirrlock.com/s/a3f8...7c2d"}
 ```
 
 </CodeGroup>
@@ -94,27 +96,17 @@ Reading the secret decrements the read counter. With `max_reads: 1` this is the 
 <CodeGroup>
 
 ```bash {{ title: 'CLI' }}
-sirr get DB_URL
+sirr get a3f8...7c2d
 ```
 
 ```bash {{ title: 'cURL' }}
-curl http://localhost:39999/secrets/DB_URL \
+curl http://localhost:39999/secrets/a3f8...7c2d \
   -H "Authorization: Bearer $SIRR_MASTER_KEY"
 ```
 
 </CodeGroup>
 
 Try reading it again — you will get `404 Not Found`. The vault already burned it.
-
-### Push and pull .env files
-
-```bash {{ title: 'Push and pull .env' }}
-# Push your entire .env with a 24-hour TTL
-sirr push .env --ttl 24h
-
-# On another machine, pull it back
-sirr pull .env
-```
 
 ## Connect MCP to your local instance
 

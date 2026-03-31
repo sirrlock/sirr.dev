@@ -81,7 +81,7 @@ The `GET /secrets` endpoint returns only metadata for each secret:
 - `max_reads` — read limit (if set)
 - `read_count` — how many times the secret has been read
 
-Secret values are never included in list responses. To retrieve a value, you must explicitly call `GET /secrets/:key`, which increments the read counter and may destroy the secret if the read limit is reached.
+Secret values are never included in list responses. To retrieve a value, you must explicitly call `GET /secrets/:id` (public) or `GET /orgs/:org_id/secrets/:key` (org-scoped), which increments the read counter and may destroy the secret if the read limit is reached.
 
 ---
 
