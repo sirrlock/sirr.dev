@@ -71,7 +71,7 @@ Supported: English, Chinese, Spanish, Arabic (RTL), French, German, Japanese, Po
 
 ## Deployment
 
-Deployed via [Dokploy](https://dokploy.com) using a multi-stage Dockerfile. Dokploy pulls from GitHub and builds inside Docker — same environment every time.
+Deployed via Docker Compose + Traefik on a remote server, pulling images from GitHub Container Registry (GHCR). GitHub Actions builds and pushes on every push to `main`.
 
 ```
 GET https://sirr.dev/api/version

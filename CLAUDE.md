@@ -56,11 +56,11 @@ npm run format    # Prettier
 
 ## Deployment
 
-Deployed to **Dokploy** at `162.55.226.118` via multi-stage Dockerfile build.
+Deployed via **Docker Compose + Traefik** on remote server `162.55.226.118`. Images pulled from GitHub Container Registry (GHCR).
 
 - **Domain**: `sirr.dev`
-- **Build type**: `dockerfile` (Dokploy pulls from GitHub, builds inside Docker)
-- **Application ID**: `i2ODrkSp8NUt3ZopmQ-OO`
+- **Image**: `ghcr.io/sirrlock/sirr.dev:latest`
+- **Reverse proxy**: Traefik (handles TLS, routing)
 
 ### Version endpoint
 
@@ -73,10 +73,10 @@ Version format: `1.0.YYYYMMDDHHmm-<short sha>`. Baked at build time via `next.co
 
 ### Deploy
 
+Push to `main` → GitHub Actions builds and pushes image to GHCR → SSH into server and pull the new image:
+
 ```bash
-ssh -p 10930 luntik@162.55.226.118 'source ~/.env && docker run --rm --network dokploy-network alpine/curl -s \
-  --max-time 60 -X POST -H "Content-Type: application/json" -H "x-api-key: $DOKPLOY_KEY" \
-  -d "{\"applicationId\": \"i2ODrkSp8NUt3ZopmQ-OO\"}" http://dokploy:3000/api/application.deploy'
+ssh -p 10930 luntik@162.55.226.118 'cd /srv/sirr.dev && docker compose pull && docker compose up -d'
 ```
 
 ## Pre-Commit Checklist
