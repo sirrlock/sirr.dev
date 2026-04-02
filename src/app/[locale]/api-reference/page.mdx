@@ -1190,18 +1190,22 @@ Sirr supports multi-tenant isolation through organizations, principals, and role
 
     </CodeGroup>
 
-    ```json {{ title: 'Response (201)' }}
+    <CodeGroup title="Response">
+
+    ```json {{ title: '201 Created' }}
     {
       "key": "DB_URL"
     }
     ```
 
-    ```json {{ title: 'Error (409) — duplicate key' }}
+    ```json {{ title: '409 Conflict' }}
     {
       "error": "secret_exists",
       "message": "Key 'DB_URL' already exists. Delete it first."
     }
     ```
+
+    </CodeGroup>
 
   </Col>
 </Row>
